@@ -1,0 +1,22 @@
+{
+    "crop_pct": 0.875,
+    "do_normalize": true,
+    "do_resize": true,
+    "feature_extractor_type" : "ConvNextFeatureExtractor",
+    "crop_mode": "center",
+    "interpolation": "bilinear",
+    "mean": [
+        0.5,
+        0.5,
+        0.5
+    ],
+    "std": [
+        0.5,
+        0.5,
+        0.5
+    ],
+    "resample" : 3,
+    "size" : 224
+}
+    
+    
