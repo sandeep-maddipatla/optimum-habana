@@ -365,7 +365,6 @@ def main():
             revision=model_args.model_revision,
             token=model_args.token,
             trust_remote_code=model_args.trust_remote_code,
-            config=config
         )
     except EnvironmentError as e:
         logger.warning(str(e))
