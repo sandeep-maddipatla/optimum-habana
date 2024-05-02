@@ -17,7 +17,6 @@ CMDLINE="python run_image_classification.py \
      --evaluation_strategy epoch  --save_strategy epoch \
      --load_best_model_at_end True \
      --save_total_limit 3  --seed 1337 \
-     --use_habana  --use_lazy_mode --use_hpu_graphs_for_inference --gaudi_config_name Habana/vit  --throughput_warmup_steps 3 \
      --dataloader_num_workers 1 \
      --ignore_mismatched_sizes=True  --trust_remote_code=True \
      --use_safetensors False \
