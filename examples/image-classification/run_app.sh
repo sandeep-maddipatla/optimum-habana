@@ -12,6 +12,8 @@ EPOCHS=${EPOCHS:-5}
 OUTDIR=${OUTDIR:-/tmp/outputs}
 DATASET=${DATASET:-cifar10}
 ICNAME=${ICNAME:-img}
+MAX_TRAIN_SAMPLES=${MAX_TRAIN_SAMPLES:-""}
+MAX_EVAL_SAMPLES=${MAX_EVAL_SAMPLES:-""}
 
 rm -rf ${OUTDIR}
 
@@ -30,6 +32,9 @@ CMDLINE="python run_image_classification.py \
      --ignore_mismatched_sizes=True  --trust_remote_code=True \
      --use_safetensors False \
      --image_processor_name=${IMAGE_PROCESSOR_NAME}"
+
+[[ ${MAX_TRAIN_SAMPLES} != "" ]] && CMDLINE="${CMDLINE} --max_train_samples ${MAX_TRAIN_SAMPLES}"
+[[ ${MAX_EVAL_SAMPLES} != "" ]] && CMDLINE="${CMDLINE} --max_eval_samples ${MAX_EVAL_SAMPLES}"
 
 echo ${CMDLINE} 2>&1 | tee cmdline.log
 time ${CMDLINE} 2>&1 | tee result.log
