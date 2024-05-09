@@ -31,5 +31,5 @@ CMDLINE="python run_image_classification.py \
      --use_safetensors False \
      --image_processor_name=${IMAGE_PROCESSOR_NAME}"
 
-echo ${CMDLINE}
+echo ${CMDLINE} 2>&1 | tee cmdline.log
 time ${CMDLINE} 2>&1 | tee result.log
