@@ -14,8 +14,10 @@ DATASET=${DATASET:-cifar10}
 ICNAME=${ICNAME:-img}
 MAX_TRAIN_SAMPLES=${MAX_TRAIN_SAMPLES:-""}
 MAX_EVAL_SAMPLES=${MAX_EVAL_SAMPLES:-""}
+USE_CPU=${USE_CPU:-"no"}
+START_CLEAN=${START_CLEAN:-"yes"}
 
-rm -rf ${OUTDIR}
+[[ ${START_CLEAN} == "yes" ]] && rm -rf ${OUTDIR}
 
 # Works for both Method-A and Method-B reported in GS-123
 CMDLINE="python run_image_classification.py \
@@ -35,6 +37,7 @@ CMDLINE="python run_image_classification.py \
 
 [[ ${MAX_TRAIN_SAMPLES} != "" ]] && CMDLINE="${CMDLINE} --max_train_samples ${MAX_TRAIN_SAMPLES}"
 [[ ${MAX_EVAL_SAMPLES} != "" ]] && CMDLINE="${CMDLINE} --max_eval_samples ${MAX_EVAL_SAMPLES}"
+[[ ${USE_CPU} == "no" ]] && CMDLINE="${CMDLINE} --use_habana  --use_lazy_mode --use_hpu_graphs_for_inference --gaudi_config_name Habana/vit  --throughput_warmup_steps 3"
 
 echo ${CMDLINE} 2>&1 | tee cmdline.log
 time ${CMDLINE} 2>&1 | tee result.log

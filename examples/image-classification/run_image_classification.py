@@ -202,13 +202,26 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
-    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        # If we pass only one argument to the script and it's the path to a json file,
-        # let's parse it to get our arguments.
-        model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-    else:
-        model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    use_habana = False
+    try:
+        # Try to capture for CPU mode
+        parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
+        if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+            # If we pass only one argument to the script and it's the path to a json file,
+            # let's parse it to get our arguments.
+            model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        else:
+            model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    except ValueError as e:
+        if "--use_habana" in str(e):
+            use_habana = True
+            parser = HfArgumentParser((ModelArguments, DataTrainingArguments, GaudiTrainingArguments))
+            if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+                # If we pass only one argument to the script and it's the path to a json file,
+                # let's parse it to get our arguments.
+                model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+            else:
+                model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     if model_args.use_auth_token is not None:
         warnings.warn(
@@ -240,8 +253,17 @@ def main():
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
 
+    gaudi_config = None
+    if use_habana:
+        gaudi_config = GaudiConfig.from_pretrained(
+            training_args.gaudi_config_name,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
+
     # Log on each process the small summary:
-    mixed_precision = training_args.bf16
+    mixed_precision = training_args.bf16 or (use_habana and gaudi_config.use_torch_autocast)
     logger.warning(
         f"Process rank: {training_args.local_rank}, device: {training_args.device}, "
         + f"distributed training: {training_args.parallel_mode.value == 'distributed'}, "
@@ -430,15 +452,27 @@ def main():
         dataset["validation"].set_transform(val_transforms)
 
     # Initialize our trainer
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset["train"] if training_args.do_train else None,
-        eval_dataset=dataset["validation"] if training_args.do_eval else None,
-        compute_metrics=compute_metrics,
-        tokenizer=image_processor,
-        data_collator=collate_fn,
-    )
+    if use_habana:
+        trainer = GaudiTrainer(
+            model=model,
+            gaudi_config=gaudi_config,
+            args=training_args,
+            train_dataset=dataset["train"] if training_args.do_train else None,
+            eval_dataset=dataset["validation"] if training_args.do_eval else None,
+            compute_metrics=compute_metrics,
+            tokenizer=image_processor,
+            data_collator=collate_fn,
+        )
+    else:
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=dataset["train"] if training_args.do_train else None,
+            eval_dataset=dataset["validation"] if training_args.do_eval else None,
+            compute_metrics=compute_metrics,
+            tokenizer=image_processor,
+            data_collator=collate_fn,
+        )
 
     # Training
     if training_args.do_train:
