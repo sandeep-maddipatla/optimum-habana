@@ -10,15 +10,17 @@ IMAGE_PROCESSOR_NAME=${1:-https://huggingface.co/timm/resnetv2_50x1_bit.goog_in2
 MODEL=${MODEL:-timm/resnetv2_50x1_bit.goog_in21k}
 EPOCHS=${EPOCHS:-5}
 OUTDIR=${OUTDIR:-/tmp/outputs}
+DATASET=${DATASET:-cifar10}
+ICNAME=${ICNAME:-img}
 
 rm -rf ${OUTDIR}
 
 # Works for both Method-A and Method-B reported in GS-123
 CMDLINE="python run_image_classification.py \
      --model_name_or_path  ${MODEL} \
-     --dataset_name cifar10 \
+     --dataset_name ${DATASET} \
      --output_dir ${OUTDIR}  \
-     --remove_unused_columns False  --image_column_name img \
+     --remove_unused_columns False  --image_column_name ${ICNAME} \
      --do_train --do_eval --learning_rate 2e-4 --num_train_epochs ${EPOCHS} \
      --per_device_train_batch_size 64 --per_device_eval_batch_size 64 \
      --evaluation_strategy epoch  --save_strategy epoch \
