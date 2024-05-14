@@ -453,6 +453,7 @@ def main():
 
     # Initialize our trainer
     if use_habana:
+        print('Using Habana trainer')
         trainer = GaudiTrainer(
             model=model,
             gaudi_config=gaudi_config,
