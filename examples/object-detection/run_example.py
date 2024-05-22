@@ -23,7 +23,6 @@ import requests
 import torch
 from PIL import Image
 from transformers import AutoConfig, AutoProcessor, AutoModelForObjectDetection
-from transformers import DetrImageProcessor, DetrForObjectDetection
 
 from optimum.habana.transformers.modeling_utils import adapt_transformers_to_gaudi
 
@@ -100,10 +99,11 @@ def main():
     config = AutoConfig.from_pretrained(
         args.model_name_or_path,
     )
-    model = DetrForObjectDetection.from_pretrained(
+    model = AutoModelForObjectDetection.from_pretrained(
         args.model_name_or_path,
+        config=config
     )
-    processor = DetrImageProcessor.from_pretrained(
+    processor = AutoProcessor.from_pretrained(
         args.model_name_or_path
     )
 
@@ -111,7 +111,6 @@ def main():
  
     if "hpu" in args.device and args.use_hpu_graphs:
         model = ht.hpu.wrap_in_hpu_graph(model)
-
         
     autocast = handle_autocast(args)
     model.to(args.device)
