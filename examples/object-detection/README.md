@@ -30,16 +30,5 @@ python3 run_example.py \
     --bf16
 ```
 
-### OwlVIT-base model
-
-```bash
-python3 run_example.py \
-    --model_name_or_path google/owlvit-base-patch32 \
-    --image_path "http://images.cocodataset.org/val2017/000000039769.jpg" \
-    --prompt "a photo of a cat, a photo of a dog" \
-    --use_hpu_graphs \
-    --bf16
-```
-
 Model that have been validated:
-  - [google/owlvit-base-patch32](https://huggingface.co/google/owlvit-base-patch32)
+  - [facebook/detr-resnet-50](https://huggingface.co/facebook/detr-resnet-50)
