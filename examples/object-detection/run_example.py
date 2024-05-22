@@ -23,11 +23,11 @@ import requests
 import torch
 from PIL import Image
 from transformers import AutoConfig, AutoProcessor, AutoModelForObjectDetection
+from transformers import DetrImageProcessor, DetrForObjectDetection
 
 from optimum.habana.transformers.modeling_utils import adapt_transformers_to_gaudi
 
-
-if __name__ == "__main__":
+def process_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -43,67 +43,93 @@ if __name__ == "__main__":
         help='Path of the input image. Should be a single string (eg: --image_path "URL")',
     )
     parser.add_argument(
-        "--prompt",
-        default="a photo of a cat, a photo of a dog",
-        type=str,
-        help='Prompt for classification. It should be a string seperated by comma. (eg: --prompt "a photo of a cat, a photo of a dog")',
-    )
-    parser.add_argument(
         "--use_hpu_graphs",
         action="store_true",
         help="Whether to use HPU graphs or not. Using HPU graphs should give better latencies.",
-    )
-    parser.add_argument(
-        "--bf16",
-        action="store_true",
-        help="Whether to use bf16 precision for classification.",
     )
     parser.add_argument(
         "--print_result",
         action="store_true",
         help="Whether to print the classification results.",
     )
+    parser.add_argument(
+        "--device",
+        default="hpu",
+        help="Specify device to run the model on"
+    )
+    parser.add_argument(
+        "--precision",
+        choices=["bf16", "fp16", "fp32"],
+        help="Specify precision to run model with"
+    )
     parser.add_argument("--warmup", type=int, default=3, help="Number of warmup iterations for benchmarking.")
     parser.add_argument("--n_iterations", type=int, default=5, help="Number of inference iterations for benchmarking.")
 
     args = parser.parse_args()
+    return args
 
+def handle_autocast(args):
+    ptype = None
+    if args.precision == "fp32":
+        ptype = torch.float32
+    elif args.precision == "fp16":
+        ptype = torch.float16
+    else:
+        ptype = torch.bfloat16
+        if not args.precision == "bf16":
+            print(f'Warning: unrecognized precision string: {args.precision}. Defaulting to torch.bfloat16')
+
+    autocast = torch.autocast(device_type=args.device, dtype=ptype, enabled=True if ptype == torch.bfloat16 else False)
+    return autocast
+
+def __synchronize(device):
+    if 'hpu' in device:
+        torch.hpu.synchronize()
+    elif 'cuda' in device:
+        torch.cuda.sychronize()
+    elif 'xpu' in device:
+        torch.xpu.sychronize()
+    else:
+        pass
+    
+
+def main():
+    args = process_args()
     adapt_transformers_to_gaudi()
 
     config = AutoConfig.from_pretrained(
         args.model_name_or_path,
     )
-    model = AutoModelForObjectDetection.from_pretrained(
+    model = DetrForObjectDetection.from_pretrained(
         args.model_name_or_path,
-        config=config
     )
-    processor = AutoProcessor.from_pretrained(
+    processor = DetrImageProcessor.from_pretrained(
         args.model_name_or_path
     )
 
     image = Image.open(requests.get(args.image_path, stream=True).raw)
-    texts = []
-    for text in args.prompt.split(","):
-        texts.append(text)
-
-    if args.use_hpu_graphs:
+ 
+    if "hpu" in args.device and args.use_hpu_graphs:
         model = ht.hpu.wrap_in_hpu_graph(model)
 
-    autocast = torch.autocast(device_type="hpu", dtype=torch.bfloat16, enabled=args.bf16)
-    model.to("hpu")
+        
+    autocast = handle_autocast(args)
+    model.to(args.device)
 
     with torch.no_grad(), autocast:
         for i in range(args.warmup):
-            inputs = processor(text=texts, images=image, return_tensors="pt").to("hpu")
+            inputs = processor(images=image, return_tensors="pt").to(args.device)
             outputs = model(**inputs)
-            torch.hpu.synchronize()
+            __synchronize(args.device)
 
         total_model_time = 0
         for i in range(args.n_iterations):
-            inputs = processor(text=texts, images=image, return_tensors="pt").to("hpu")
+            inputs = processor(images=image, return_tensors="pt").to(args.device)
+            __synchronize(args.device)
             model_start_time = time.time()
             outputs = model(**inputs)
-            torch.hpu.synchronize()
+            __synchronize(args.device)
+
             model_end_time = time.time()
             total_model_time = total_model_time + (model_end_time - model_start_time)
 
@@ -119,8 +145,12 @@ if __name__ == "__main__":
                     boxes, scores, labels = results[i]["boxes"], results[i]["scores"], results[i]["labels"]
                     for box, score, label in zip(boxes, scores, labels):
                         box = [round(i, 2) for i in box.tolist()]
-                        print(f"Detected {texts[label]} with confidence {round(score.item(), 3)} at location {box}")
+                        print(f"Detected label={label} with confidence {round(score.item(), 3)} at location {box}")
 
     print("n_iterations: " + str(args.n_iterations))
     print("Total latency (ms): " + str(total_model_time * 1000))
     print("Average latency (ms): " + str(total_model_time * 1000 / args.n_iterations))
+
+
+if __name__ == "__main__":
+    main()
