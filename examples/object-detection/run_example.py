@@ -23,7 +23,15 @@ import requests
 import torch
 from PIL import Image
 
-from transformers import AutoConfig, AutoProcessor, AutoModelForObjectDetection, HfArgumentParser, Trainer, TrainingArguments
+from transformers import (
+    AutoConfig,
+    AutoProcessor,
+    AutoModelForObjectDetection,
+    HfArgumentParser,
+    Trainer,
+    TrainingArguments
+)
+
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
@@ -147,19 +155,6 @@ class ModelArguments:
         default=False,
         metadata={"help": "Will enable to load a pretrained model whose head dimensions are different."},
     )
-    image_path: str = field(
-        default="http://images.cocodataset.org/val2017/000000039769.jpg",
-        metadata={"help": 'Path of the input image. Should be a single string (eg: --image_path "URL").'},
-    )
-    print_result: bool = field(
-        default=False,
-        metadata={"help" : "Whether to print the classification results."},
-    )
-    precision: str = field(
-        default="bf16",
-        choices=["bf16", "fp16", "fp32"],
-        metadata={"help" : "Specify precision to run model with"}
-    )
 
 def main():
     use_habana = False
@@ -210,7 +205,6 @@ def main():
         token=model_args.token,
     )
 
-
     # Log on each process the small summary:
     mixed_precision = training_args.bf16 or gaudi_config.use_torch_autocast
     logger.warning(
@@ -238,7 +232,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # Initialize our dataset and prepare it for the 'image-classification' task.
+    # Initialize our dataset and prepare it to use in execution.
     if data_args.dataset_name is not None:
         dataset = load_dataset(
             data_args.dataset_name,
@@ -271,61 +265,81 @@ def main():
             "Make sure to set `--label_column_name` to the correct text column - one of "
             f"{', '.join(dataset_column_names)}."
         )
-    
+
     config = AutoConfig.from_pretrained(
         args.model_name_or_path,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        token=model_args.token,
+        trust_remote_code=model_args.trust_remote_code,    
     )
     model = AutoModelForObjectDetection.from_pretrained(
         args.model_name_or_path,
-        config=config
+        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+        config=config,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        token=model_args.token,
+        trust_remote_code=model_args.trust_remote_code,
+        ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
     )
     processor = AutoProcessor.from_pretrained(
-        args.model_name_or_path
+        model_args.image_processor_name or
+        model_args.model_name_or_path, cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision, token=model_args.token,
+        trust_remote_code=model_args.trust_remote_code,
     )
 
-    image = Image.open(requests.get(args.image_path, stream=True).raw)
- 
-    if "hpu" in args.device and args.use_hpu_graphs:
-        model = ht.hpu.wrap_in_hpu_graph(model)
-        
-    autocast = handle_autocast(args)
-    model.to(args.device)
+    if training_args.do_train:
+        if "train" not in dataset:
+            raise ValueError("--do_train requires a train dataset")
+        if data_args.max_train_samples is not None:
+            dataset["train"] = (
+                dataset["train"].shuffle(seed=training_args.seed).select(range(data_args.max_train_samples))
+            )
+        # Set the training transforms
+        dataset["train"].set_transform(train_transforms)
 
-    with torch.no_grad(), autocast:
-        for i in range(args.warmup):
-            inputs = processor(images=image, return_tensors="pt").to(args.device)
-            outputs = model(**inputs)
-            __synchronize(args.device)
+    if training_args.do_eval:
+        if "validation" not in dataset:
+            raise ValueError("--do_eval requires a validation dataset")
+        if data_args.max_eval_samples is not None:
+            dataset["validation"] = (
+                dataset["validation"].shuffle(seed=training_args.seed).select(range(data_args.max_eval_samples))
+            )
+        # Set the validation transforms
+        dataset["validation"].set_transform(val_transforms)
 
-        total_model_time = 0
-        for i in range(args.n_iterations):
-            inputs = processor(images=image, return_tensors="pt").to(args.device)
-            __synchronize(args.device)
-            model_start_time = time.time()
-            outputs = model(**inputs)
-            __synchronize(args.device)
+    # Initialize our trainer
+    trainer = GaudiTrainer(
+        model=model,
+        gaudi_config=gaudi_config,
+        args=training_args,
+        train_dataset=dataset["train"] if training_args.do_train else None,
+        eval_dataset=dataset["validation"] if training_args.do_eval else None,
+        compute_metrics=compute_metrics,
+        tokenizer=image_processor,
+        data_collator=collate_fn,
+    )
 
-            model_end_time = time.time()
-            total_model_time = total_model_time + (model_end_time - model_start_time)
+    # Training
+    if training_args.do_train:
+        checkpoint = None
+        if training_args.resume_from_checkpoint is not None:
+            checkpoint = training_args.resume_from_checkpoint
+        elif last_checkpoint is not None:
+            checkpoint = last_checkpoint
+        train_result = trainer.train(resume_from_checkpoint=checkpoint)
+        trainer.save_model()
+        trainer.log_metrics("train", train_result.metrics)
+        trainer.save_metrics("train", train_result.metrics)
+        trainer.save_state()
 
-            if args.print_result:
-                # Target image sizes (height, width) to rescale box predictions [batch_size, 2]
-                target_sizes = torch.Tensor([image.size[::-1]])
-
-                # Convert outputs (bounding boxes and class logits) to Pascal VOC format (xmin, ymin, xmax, ymax)
-                results = processor.post_process_object_detection(
-                    outputs=outputs, target_sizes=target_sizes, threshold=0.1
-                )
-                if i == 0:
-                    boxes, scores, labels = results[i]["boxes"], results[i]["scores"], results[i]["labels"]
-                    for box, score, label in zip(boxes, scores, labels):
-                        box = [round(i, 2) for i in box.tolist()]
-                        print(f"Detected label={label} with confidence {round(score.item(), 3)} at location {box}")
-
-    print("n_iterations: " + str(args.n_iterations))
-    print("Total latency (ms): " + str(total_model_time * 1000))
-    print("Average latency (ms): " + str(total_model_time * 1000 / args.n_iterations))
-
+    # Evaluation
+    if training_args.do_eval:
+        metrics = trainer.evaluate()
+        trainer.log_metrics("eval", metrics)
+        trainer.save_metrics("eval", metrics)
 
 if __name__ == "__main__":
     main()
