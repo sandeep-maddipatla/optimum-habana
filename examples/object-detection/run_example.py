@@ -168,7 +168,7 @@ class ModelArguments:
         metadata={"help": "Will enable to load a pretrained model whose head dimensions are different."},
     )
 
-def init_dataset(data_args, training_args, train_transforms=None, val_transforms=None):
+def init_dataset(data_args, training_args, model_args, train_transforms=None, val_transforms=None):
     # Initialize our dataset and prepare it to use in execution.
 
     # Load dataset from hub or local directory options on command line.
@@ -178,6 +178,7 @@ def init_dataset(data_args, training_args, train_transforms=None, val_transforms
             data_args.dataset_config_name,
             cache_dir=model_args.cache_dir,
             token=model_args.token,
+            trust_remote_code=model_args.trust_remote_code,
         )
     else:
         data_files = {}
@@ -242,10 +243,16 @@ def init_dataset(data_args, training_args, train_transforms=None, val_transforms
     
     return dataset
 
-def collate_fn(images):
-    pixel_values = torch.stack([example["pixel_values"] for example in images])
-    objects = torch.tensor([example[data_args.objects_column_name] for example in images])
+def collate_fn(image_batch):
+    pixel_values = torch.stack([image["pixel_values"] for image in image_batch])
+    objects = torch.tensor([image[data_args.objects_column_name] for image in image_batch])
 
+# Define our compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
+# predictions and label_ids field) and has to return a dictionary string to float.
+def compute_metrics(p):
+    """Computes accuracy on a batch of predictions"""
+    return metric.compute(predictions=np.argmax(p.predictions, axis=1), references=p.label_ids)
+   
 def main():
     use_habana = False
     try:
@@ -343,31 +350,12 @@ def main():
         ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
     )
     processor = AutoImageProcessor.from_pretrained(
-        model_args.image_processor_name or
-        model_args.model_name_or_path, cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision, token=model_args.token,
+        model_args.image_processor_name or model_args.model_name_or_path,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        token=model_args.token,
         trust_remote_code=model_args.trust_remote_code,
     )
-
-    if training_args.do_train:
-        if "train" not in dataset:
-            raise ValueError("--do_train requires a train dataset")
-        if data_args.max_train_samples is not None:
-            dataset["train"] = (
-                dataset["train"].shuffle(seed=training_args.seed).select(range(data_args.max_train_samples))
-            )
-        # Set the training transforms
-        dataset["train"].set_transform(train_transforms)
-
-    if training_args.do_eval:
-        if "validation" not in dataset:
-            raise ValueError("--do_eval requires a validation dataset")
-        if data_args.max_eval_samples is not None:
-            dataset["validation"] = (
-                dataset["validation"].shuffle(seed=training_args.seed).select(range(data_args.max_eval_samples))
-            )
-        # Set the validation transforms
-        dataset["validation"].set_transform(val_transforms)
 
     # Initialize our trainer
     trainer = GaudiTrainer(
