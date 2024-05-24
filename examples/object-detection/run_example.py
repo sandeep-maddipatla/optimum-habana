@@ -30,7 +30,7 @@ import transformers
 from transformers import (
     MODEL_FOR_OBJECT_DETECTION_MAPPING,
     AutoConfig,
-    AutoProcessor,
+    AutoImageProcessor,
     AutoModelForObjectDetection,
     HfArgumentParser,
     Trainer,
@@ -359,7 +359,7 @@ def main():
         trust_remote_code=model_args.trust_remote_code,
         ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
     )
-    processor = AutoImageProcessor.from_pretrained(
+    image_processor = AutoImageProcessor.from_pretrained(
         model_args.image_processor_name or model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
