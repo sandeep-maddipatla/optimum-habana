@@ -16,14 +16,19 @@
 # Copied from https://huggingface.co/docs/transformers/model_doc/owlvit
 
 import argparse
-import time
+import logging
+import sys
+import os
+from dataclasses import dataclass, field
+from typing import Optional
 
 import habana_frameworks.torch as ht
-import requests
 import torch
 from PIL import Image
 
+import transformers
 from transformers import (
+    MODEL_FOR_OBJECT_DETECTION_MAPPING,
     AutoConfig,
     AutoProcessor,
     AutoModelForObjectDetection,
@@ -31,13 +36,14 @@ from transformers import (
     Trainer,
     TrainingArguments
 )
-
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 from datasets import load_dataset
 
 from optimum.habana.transformers.modeling_utils import adapt_transformers_to_gaudi
+from optimum.habana import GaudiConfig, GaudiTrainer, GaudiTrainingArguments
+from optimum.habana.utils import set_seed
 
 try:
     from optimum.habana.utils import check_optimum_habana_min_version
@@ -50,6 +56,9 @@ logger = logging.getLogger(__name__)
 # Will error if the minimal version of Transformers and Optimum Habana are not installed. Remove at your own risks.
 check_min_version("4.38.0")
 check_optimum_habana_min_version("1.10.0")
+
+MODEL_CONFIG_CLASSES = list(MODEL_FOR_OBJECT_DETECTION_MAPPING.keys())
+MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 @dataclass
 class DataTrainingArguments:
@@ -226,7 +235,7 @@ def init_dataset(data_args, training_args, model_args, train_transforms=None, va
             )
 
         # Set the training transforms
-        if train_transforms not None:
+        if train_transforms is not None:
             dataset["train"].set_transform(train_transforms)
 
     if training_args.do_eval:
@@ -238,7 +247,7 @@ def init_dataset(data_args, training_args, model_args, train_transforms=None, va
             )
 
         # Set the validation transforms
-        if val_transforms not None:
+        if val_transforms is not None:
             dataset["validation"].set_transform(val_transforms)
     
     return dataset
@@ -261,7 +270,8 @@ def main():
         if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
             # If we pass only one argument to the script and it's the path to a json file,
             # let's parse it to get our arguments.
-            model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))       else:
+            model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        else:
             model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     except ValueError as e:
         if "--use_habana" in str(e):
@@ -329,7 +339,7 @@ def main():
     set_seed(training_args.seed)
 
     # Init dataset
-    dataset = init_dataset(data_args)
+    dataset = init_dataset(data_args, training_args, model_args)
 
     # Use HF Autoclasses to load the model and pre-trained weights
     config = AutoConfig.from_pretrained(

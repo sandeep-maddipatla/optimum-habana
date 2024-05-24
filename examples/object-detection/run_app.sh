@@ -21,7 +21,7 @@ WORLD_SIZE=${WORLD_SIZE:-1}
 [[ ${START_CLEAN} == "yes" ]] && rm -rf ${OUTDIR}
 
 # Works for both Method-A and Method-B reported in GS-123
-CMDLINE="run_image_classification.py \
+CMDLINE="run_example.py \
      --model_name_or_path  ${MODEL} \
      --dataset_name ${DATASET} \
      --output_dir ${OUTDIR}  \
@@ -40,6 +40,12 @@ CMDLINE="run_image_classification.py \
 [[ ${USE_CPU} == "no" ]] && CMDLINE="${CMDLINE} --use_habana  --use_lazy_mode --use_hpu_graphs_for_inference --gaudi_config_name Habana/vit  --throughput_warmup_steps 3"
 [[ ${IMAGE_PROCESSOR_NAME} != "" ]] && CMDLINE="${CMDLINE} --image_processor_name=${IMAGE_PROCESSOR_NAME}"
 
-MP_CMDLINE="python ../gaudi_spawn.py --world_size ${WORLD_SIZE} --use_mpi ${CMDLINE}"
+if [[ ${WORLD_SIZE} -eq 1 ]]
+then
+    MP_CMDLINE="python ${CMDLINE}"
+else
+    MP_CMDLINE="python ../gaudi_spawn.py --world_size ${WORLD_SIZE} --use_mpi ${CMDLINE}"
+fi
+
 echo  ${MP_CMDLINE} 2>&1 | tee cmdline.log
 time ${MP_CMDLINE} 2>&1 | tee result.log
