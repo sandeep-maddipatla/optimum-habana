@@ -95,9 +95,21 @@ class DataTrainingArguments:
         default="image",
         metadata={"help": "The name of the dataset column containing the image data. Defaults to 'image'."},
     )
-    label_column_name: str = field(
-        default="label",
-        metadata={"help": "The name of the dataset column containing the labels. Defaults to 'label'."},
+    objects_column_name: str = field(
+        default="objects",
+        metadata={"help": "The name of the dataset column containing the image data. Defaults to 'image'."},
+    )
+    label_tag_name: str = field(
+        default="objects['label']",
+        metadata={
+            "help": "The name of the dataset tag containing the labels for objects detected. Defaults to 'label' in objects dict."
+        },
+    )
+    bbox_tag_name: str = field(
+        default="objects['bbox']",
+        metadata={
+            "help": "The name of the dataset tag containing the bounding box co-ordinates for objects detected. Defaults to 'bbox' in objects dict."
+        },
     )
 
     def __post_init__(self):
@@ -156,6 +168,84 @@ class ModelArguments:
         metadata={"help": "Will enable to load a pretrained model whose head dimensions are different."},
     )
 
+def init_dataset(data_args, training_args, train_transforms=None, val_transforms=None):
+    # Initialize our dataset and prepare it to use in execution.
+
+    # Load dataset from hub or local directory options on command line.
+    if data_args.dataset_name is not None:
+        dataset = load_dataset(
+            data_args.dataset_name,
+            data_args.dataset_config_name,
+            cache_dir=model_args.cache_dir,
+            token=model_args.token,
+        )
+    else:
+        data_files = {}
+        if data_args.train_dir is not None:
+            data_files["train"] = os.path.join(data_args.train_dir, "**")
+        if data_args.validation_dir is not None:
+            data_files["validation"] = os.path.join(data_args.validation_dir, "**")
+        dataset = load_dataset(
+            "imagefolder",
+            data_files=data_files,
+            cache_dir=model_args.cache_dir,
+        )
+
+    #Check if dataset has required columns
+    dataset_column_names = dataset["train"].column_names if "train" in dataset else dataset["validation"].column_names
+    if data_args.image_column_name not in dataset_column_names:
+        raise ValueError(
+            f"--image_column_name {data_args.image_column_name} not found in dataset '{data_args.dataset_name}'. "
+            "Make sure to set `--image_column_name` to the correct audio column - one of "
+            f"{', '.join(dataset_column_names)}."
+        )
+
+    if data_args.objects_column_name not in dataset_column_names:
+        raise ValueError(
+            f"--objects_column_name {data_args.objects_column_name} not found in dataset '{data_args.dataset_name}'. "
+            "Make sure to set `--objects_column_name` to the correct text column - one of "
+            f"{', '.join(dataset_column_names)}."
+        )
+
+    # If we don't have a validation split, split off a percentage of train as validation dataset.
+    data_args.train_val_split = None if "validation" in dataset.keys() else data_args.train_val_split
+    if isinstance(data_args.train_val_split, float) and data_args.train_val_split > 0.0:
+        split = dataset["train"].train_test_split(data_args.train_val_split)
+        dataset["train"] = split["train"]
+        dataset["validation"] = split["test"]
+
+
+    # Specify transforms required for dataset, and shuffle + limit dataset to max samples specified
+    if training_args.do_train:
+        if "train" not in dataset:
+            raise ValueError("--do_train requires a train dataset")
+        if data_args.max_train_samples is not None:
+            dataset["train"] = (
+                dataset["train"].shuffle(seed=training_args.seed).select(range(data_args.max_train_samples))
+            )
+
+        # Set the training transforms
+        if train_transforms not None:
+            dataset["train"].set_transform(train_transforms)
+
+    if training_args.do_eval:
+        if "validation" not in dataset:
+            raise ValueError("--do_eval requires a validation dataset")
+        if data_args.max_eval_samples is not None:
+            dataset["validation"] = (
+                dataset["validation"].shuffle(seed=training_args.seed).select(range(data_args.max_eval_samples))
+            )
+
+        # Set the validation transforms
+        if val_transforms not None:
+            dataset["validation"].set_transform(val_transforms)
+    
+    return dataset
+
+def collate_fn(images):
+    pixel_values = torch.stack([example["pixel_values"] for example in images])
+    objects = torch.tensor([example[data_args.objects_column_name] for example in images])
+
 def main():
     use_habana = False
     try:
@@ -205,7 +295,6 @@ def main():
         token=model_args.token,
     )
 
-    # Log on each process the small summary:
     mixed_precision = training_args.bf16 or gaudi_config.use_torch_autocast
     logger.warning(
         f"Process rank: {training_args.local_rank}, device: {training_args.device}, "
@@ -232,40 +321,10 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # Initialize our dataset and prepare it to use in execution.
-    if data_args.dataset_name is not None:
-        dataset = load_dataset(
-            data_args.dataset_name,
-            data_args.dataset_config_name,
-            cache_dir=model_args.cache_dir,
-            token=model_args.token,
-        )
-    else:
-        data_files = {}
-        if data_args.train_dir is not None:
-            data_files["train"] = os.path.join(data_args.train_dir, "**")
-        if data_args.validation_dir is not None:
-            data_files["validation"] = os.path.join(data_args.validation_dir, "**")
-        dataset = load_dataset(
-            "imagefolder",
-            data_files=data_files,
-            cache_dir=model_args.cache_dir,
-        )
+    # Init dataset
+    dataset = init_dataset(data_args)
 
-    dataset_column_names = dataset["train"].column_names if "train" in dataset else dataset["validation"].column_names
-    if data_args.image_column_name not in dataset_column_names:
-        raise ValueError(
-            f"--image_column_name {data_args.image_column_name} not found in dataset '{data_args.dataset_name}'. "
-            "Make sure to set `--image_column_name` to the correct audio column - one of "
-            f"{', '.join(dataset_column_names)}."
-        )
-    if data_args.label_column_name not in dataset_column_names:
-        raise ValueError(
-            f"--label_column_name {data_args.label_column_name} not found in dataset '{data_args.dataset_name}'. "
-            "Make sure to set `--label_column_name` to the correct text column - one of "
-            f"{', '.join(dataset_column_names)}."
-        )
-
+    # Use HF Autoclasses to load the model and pre-trained weights
     config = AutoConfig.from_pretrained(
         args.model_name_or_path,
         cache_dir=model_args.cache_dir,
@@ -283,7 +342,7 @@ def main():
         trust_remote_code=model_args.trust_remote_code,
         ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
     )
-    processor = AutoProcessor.from_pretrained(
+    processor = AutoImageProcessor.from_pretrained(
         model_args.image_processor_name or
         model_args.model_name_or_path, cache_dir=model_args.cache_dir,
         revision=model_args.model_revision, token=model_args.token,
