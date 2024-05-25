@@ -36,6 +36,17 @@ from transformers import (
     Trainer,
     TrainingArguments
 )
+from torchvision.transforms import (
+    CenterCrop,
+    Compose,
+    Lambda,
+    Normalize,
+    RandomHorizontalFlip,
+    RandomResizedCrop,
+    Resize,
+    ToTensor,
+)
+
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
@@ -177,6 +188,61 @@ class ModelArguments:
         metadata={"help": "Will enable to load a pretrained model whose head dimensions are different."},
     )
 
+def set_dataset_transforms(dataset, image_processor,img_col_name="image"):
+    # Define torchvision transforms to be applied to each image.
+    if "shortest_edge" in image_processor.size:
+        size = image_processor.size["shortest_edge"]
+    elif "height" in image_processor.size and "width" in image_processor.size:
+        size = (image_processor.size["height"], image_processor.size["width"])
+    else:
+        raise ValueError(
+            f"image_processor.size needs to specify 'shortest_edge' or 'height' and 'width'"
+        )
+
+    normalize = (
+        Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
+        if hasattr(image_processor, "image_mean") and hasattr(image_processor, "image_std")
+        else Lambda(lambda x: x)
+    )
+
+    _train_transforms = Compose(
+        [
+            RandomResizedCrop(size),
+            RandomHorizontalFlip(),
+            ToTensor(),
+            normalize,
+        ]
+    )
+    _val_transforms = Compose(
+        [
+            Resize(size),
+            CenterCrop(size),
+            ToTensor(),
+            normalize,
+        ]
+    )
+
+    def train_transforms(example_batch):
+        """Apply _train_transforms across a batch."""
+        example_batch["pixel_values"] = [
+            _train_transforms(pil_img.convert("RGB")) for pil_img in example_batch[img_col_name]
+        ]
+        return example_batch
+
+    def val_transforms(example_batch):
+        """Apply _val_transforms across a batch."""
+        example_batch["pixel_values"] = [
+            _val_transforms(pil_img.convert("RGB")) for pil_img in example_batch[img_col_name]
+        ]
+        return example_batch
+
+    if "train" in dataset.keys():
+        dataset["train"].set_transform(train_transforms)
+
+    if "validation" in dataset.keys():
+        dataset["validation"].set_transform(val_transforms)
+
+    
 def init_dataset(data_args, training_args, model_args, train_transforms=None, val_transforms=None):
     # Initialize our dataset and prepare it to use in execution.
 
@@ -234,10 +300,6 @@ def init_dataset(data_args, training_args, model_args, train_transforms=None, va
                 dataset["train"].shuffle(seed=training_args.seed).select(range(data_args.max_train_samples))
             )
 
-        # Set the training transforms
-        if train_transforms is not None:
-            dataset["train"].set_transform(train_transforms)
-
     if training_args.do_eval:
         if "validation" not in dataset:
             raise ValueError("--do_eval requires a validation dataset")
@@ -245,16 +307,9 @@ def init_dataset(data_args, training_args, model_args, train_transforms=None, va
             dataset["validation"] = (
                 dataset["validation"].shuffle(seed=training_args.seed).select(range(data_args.max_eval_samples))
             )
-
-        # Set the validation transforms
-        if val_transforms is not None:
-            dataset["validation"].set_transform(val_transforms)
     
     return dataset
 
-def collate_fn(image_batch):
-    pixel_values = torch.stack([image["pixel_values"] for image in image_batch])
-    objects = torch.tensor([image[data_args.objects_column_name] for image in image_batch])
 
 # Define our compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
 # predictions and label_ids field) and has to return a dictionary string to float.
@@ -367,6 +422,15 @@ def main():
         trust_remote_code=model_args.trust_remote_code,
     )
 
+    # Set Required transforms
+    set_dataset_transforms(dataset, image_processor, data_args.image_column_name)
+
+    def collate_fn(image_batch):
+        batch = {}
+        batch["pixel_values"] = torch.stack([image["pixel_values"] for image in image_batch])
+        batch["objects"] = [image[data_args.objects_column_name] for image in image_batch]
+        
+    
     # Initialize our trainer
     trainer = GaudiTrainer(
         model=model,
