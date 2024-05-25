@@ -12,11 +12,12 @@ EPOCHS=${EPOCHS:-1}
 OUTDIR=${OUTDIR:-/tmp/outputs}
 DATASET=${DATASET:-rafaelpadilla/coco2017}
 ICNAME=${ICNAME:-image}
-MAX_TRAIN_SAMPLES=${MAX_TRAIN_SAMPLES:-""}
-MAX_EVAL_SAMPLES=${MAX_EVAL_SAMPLES:-""}
+MAX_TRAIN_SAMPLES=${MAX_TRAIN_SAMPLES:-"20"}
+MAX_EVAL_SAMPLES=${MAX_EVAL_SAMPLES:-"10"}
 USE_CPU=${USE_CPU:-"no"}
 START_CLEAN=${START_CLEAN:-"yes"}
 WORLD_SIZE=${WORLD_SIZE:-1}
+BATCH_SIZE=${BATCH_SIZE:-64}
 
 [[ ${START_CLEAN} == "yes" ]] && rm -rf ${OUTDIR}
 
@@ -27,7 +28,7 @@ CMDLINE="run_example.py \
      --output_dir ${OUTDIR}  \
      --remove_unused_columns False  --image_column_name ${ICNAME} \
      --do_train --do_eval --learning_rate 2e-4 --num_train_epochs ${EPOCHS} \
-     --per_device_train_batch_size 64 --per_device_eval_batch_size 64 \
+     --per_device_train_batch_size ${BATCH_SIZE} --per_device_eval_batch_size ${BATCH_SIZE} \
      --evaluation_strategy epoch  --save_strategy epoch \
      --load_best_model_at_end True \
      --save_total_limit 3  --seed 1337 \
