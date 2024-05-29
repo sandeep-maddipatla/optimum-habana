@@ -17,7 +17,7 @@ MAX_EVAL_SAMPLES=${MAX_EVAL_SAMPLES:-"10"}
 USE_CPU=${USE_CPU:-"no"}
 START_CLEAN=${START_CLEAN:-"yes"}
 WORLD_SIZE=${WORLD_SIZE:-1}
-BATCH_SIZE=${BATCH_SIZE:-64}
+BATCH_SIZE=${BATCH_SIZE:-2}
 
 [[ ${START_CLEAN} == "yes" ]] && rm -rf ${OUTDIR}
 
@@ -26,6 +26,7 @@ CMDLINE="run_example.py \
      --model_name_or_path  ${MODEL} \
      --dataset_name ${DATASET} \
      --output_dir ${OUTDIR}  \
+     --bf16 false \
      --remove_unused_columns False  --image_column_name ${ICNAME} \
      --do_train --do_eval --learning_rate 2e-4 --num_train_epochs ${EPOCHS} \
      --per_device_train_batch_size ${BATCH_SIZE} --per_device_eval_batch_size ${BATCH_SIZE} \

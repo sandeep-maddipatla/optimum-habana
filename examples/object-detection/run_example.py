@@ -120,13 +120,13 @@ class DataTrainingArguments:
         metadata={"help": "The name of the dataset column containing the image data. Defaults to 'image'."},
     )
     label_tag_name: str = field(
-        default="objects['label']",
+        default="label",
         metadata={
             "help": "The name of the dataset tag containing the labels for objects detected. Defaults to 'label' in objects dict."
         },
     )
     bbox_tag_name: str = field(
-        default="objects['bbox']",
+        default="bbox",
         metadata={
             "help": "The name of the dataset tag containing the bounding box co-ordinates for objects detected. Defaults to 'bbox' in objects dict."
         },
@@ -188,7 +188,7 @@ class ModelArguments:
         metadata={"help": "Will enable to load a pretrained model whose head dimensions are different."},
     )
 
-def set_dataset_transforms(dataset, image_processor,img_col_name="image"):
+def set_dataset_transforms(dataset, image_processor,data_args):
     # Define torchvision transforms to be applied to each image.
     if "shortest_edge" in image_processor.size:
         size = image_processor.size["shortest_edge"]
@@ -224,17 +224,27 @@ def set_dataset_transforms(dataset, image_processor,img_col_name="image"):
 
     def train_transforms(example_batch):
         """Apply _train_transforms across a batch."""
+        
         example_batch["pixel_values"] = [
-            _train_transforms(pil_img.convert("RGB")) for pil_img in example_batch[img_col_name]
+            _train_transforms(pil_img.convert("RGB")) for pil_img in example_batch[data_args.image_column_name]
         ]
+        example_batch["labels"] = [ {
+            'class_labels': torch.LongTensor(x[data_args.label_tag_name]),
+            'boxes': torch.FloatTensor(x[data_args.bbox_tag_name])
+        } for x in example_batch[data_args.objects_column_name]]
+
+        print(f'b=example_batch["labels"]')
+        print('bdone')
+        sys.stdout.flush()
         return example_batch
 
     def val_transforms(example_batch):
         """Apply _val_transforms across a batch."""
         example_batch["pixel_values"] = [
-            _val_transforms(pil_img.convert("RGB")) for pil_img in example_batch[img_col_name]
+            _train_transforms(pil_img.convert("RGB")) for pil_img in example_batch[data_args.image_column_name]
         ]
-        return example_batch
+        example_batch["labels"] = [ x for x in example_batch[data_args.objects_column_name][data_args.label_tag_name]]
+        return exampel_batch
 
     if "train" in dataset.keys():
         dataset["train"].set_transform(train_transforms)
@@ -329,6 +339,7 @@ def main():
         else:
             model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     except ValueError as e:
+        print(e)
         if "--use_habana" in str(e):
             use_habana = True
             parser = HfArgumentParser((ModelArguments, DataTrainingArguments, GaudiTrainingArguments))
@@ -423,12 +434,13 @@ def main():
     )
 
     # Set Required transforms
-    set_dataset_transforms(dataset, image_processor, data_args.image_column_name)
+    set_dataset_transforms(dataset, image_processor, data_args)
 
     def collate_fn(image_batch):
         batch = {}
         batch["pixel_values"] = torch.stack([image["pixel_values"] for image in image_batch])
-        batch["objects"] = [image[data_args.objects_column_name] for image in image_batch]
+        batch["labels"] = [image["labels"] for image in image_batch]
+        return batch
         
     
     # Initialize our trainer
