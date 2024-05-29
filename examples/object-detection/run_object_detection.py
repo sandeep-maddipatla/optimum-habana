@@ -48,8 +48,6 @@ from transformers.utils.versions import require_version
 logger = logging.getLogger(__name__)
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
-check_min_version("4.42.0.dev0")
-
 require_version("datasets>=2.0.0", "To fix: pip install -r examples/pytorch/object-detection/requirements.txt")
 
 
@@ -194,6 +192,7 @@ def compute_metrics(
         # collect targets in the required format for metric computation
         # boxes were converted to YOLO format needed for model training
         # here we will convert them to Pascal VOC format (x_min, y_min, x_max, y_max)
+
         for image_target in batch:
             boxes = torch.tensor(image_target["boxes"])
             boxes = convert_bbox_yolo_to_pascal(boxes, image_target["orig_size"])
@@ -422,7 +421,7 @@ def main():
     image_processor = AutoImageProcessor.from_pretrained(
         model_args.image_processor_name or model_args.model_name_or_path,
         do_resize=True,
-        size={"max_height": data_args.image_square_size, "max_width": data_args.image_square_size},
+        # size={"max_height": data_args.image_square_size, "max_width": data_args.image_square_size},
         do_pad=True,
         pad_size={"height": data_args.image_square_size, "width": data_args.image_square_size},
         **common_pretrained_args,
@@ -468,9 +467,9 @@ def main():
     validation_transform_batch = partial(
         augment_and_transform_batch, transform=validation_transform, image_processor=image_processor
     )
-
-    dataset["train"] = dataset["train"].with_transform(train_transform_batch)
-    dataset["validation"] = dataset["validation"].with_transform(validation_transform_batch)
+    
+    dataset["train"] = dataset["train"].with_transform(train_transform_batch).shuffle(seed=training_args.seed).select(range(data_args.max_train_samples))
+    dataset["validation"] = dataset["validation"].with_transform(validation_transform_batch).shuffle(seed=training_args.seed).select(range(data_args.max_eval_samples))
     dataset["test"] = dataset["test"].with_transform(validation_transform_batch)
 
     # ------------------------------------------------------------------------------------------------
