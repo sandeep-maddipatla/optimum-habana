@@ -44,10 +44,20 @@ from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
+from optimum.habana import GaudiConfig, GaudiTrainer, GaudiTrainingArguments
+from optimum.habana.utils import set_seed
+
+try:
+    from optimum.habana.utils import check_optimum_habana_min_version
+except ImportError:
+    def check_optimum_habana_min_version(*a, **b):
+        return ()
 
 logger = logging.getLogger(__name__)
 
-# Will error if the minimal version of Transformers is not installed. Remove at your own risks.
+# Will error if the minimal version of Transformers and Optimum Habana are not installed. Remove at your own risks.
+check_min_version("4.41.0")
+check_optimum_habana_min_version("1.10.0")
 require_version("datasets>=2.0.0", "To fix: pip install -r examples/pytorch/object-detection/requirements.txt")
 
 
@@ -325,17 +335,40 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
-    if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        # If we pass only one argument to the script and it's the path to a json file,
-        # let's parse it to get our arguments.
-        model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-    else:
-        model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    use_habana = False
+    try:
+        parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
+        if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+            # If we pass only one argument to the script and it's the path to a json file,
+            # let's parse it to get our arguments.
+            model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        else:
+            model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    except ValueError as e:
+        if "--use_habana" in str(e):
+            use_habana = True
+            parser = HfArgumentParser((ModelArguments, DataTrainingArguments, GaudiTrainingArguments))
+
+        if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+            # If we pass only one argument to the script and it's the path to a json file,
+            # let's parse it to get our arguments.
+            model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        else:
+            model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_object_detection", model_args, data_args)
+
+    gaudi_config = None
+    if use_habana:
+        gaudi_config = GaudiConfig.from_pretrained(
+            training_args.gaudi_config_name,
+            cache_dir=model_args.cache_dir,
+            revision=model_args.model_revision,
+            use_auth_token=True if model_args.use_auth_token else None,
+        )
 
     # Setup logging
     logging.basicConfig(
@@ -355,9 +388,11 @@ def main():
     transformers.utils.logging.enable_explicit_format()
 
     # Log on each process the small summary:
+    mixed_precision = training_args.bf16 or (use_habana and gaudi_config.use_torch_autocast)
     logger.warning(
         f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}, "
         + f"distributed training: {training_args.parallel_mode.value == 'distributed'}, 16-bits training: {training_args.fp16}"
+        + f"mixed-precision training: {mixed_precision}"
     )
     logger.info(f"Training/evaluation parameters {training_args}")
 
@@ -467,7 +502,7 @@ def main():
     validation_transform_batch = partial(
         augment_and_transform_batch, transform=validation_transform, image_processor=image_processor
     )
-    
+
     dataset["train"] = dataset["train"].with_transform(train_transform_batch).shuffle(seed=training_args.seed).select(range(data_args.max_train_samples))
     dataset["validation"] = dataset["validation"].with_transform(validation_transform_batch).shuffle(seed=training_args.seed).select(range(data_args.max_eval_samples))
     dataset["test"] = dataset["test"].with_transform(validation_transform_batch)
@@ -480,15 +515,21 @@ def main():
         compute_metrics, image_processor=image_processor, id2label=id2label, threshold=0.0
     )
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset["train"] if training_args.do_train else None,
-        eval_dataset=dataset["validation"] if training_args.do_eval else None,
-        tokenizer=image_processor,
-        data_collator=collate_fn,
-        compute_metrics=eval_compute_metrics_fn,
-    )
+    trainer_kwargs = {
+        "model": model,
+        "args": training_args,
+        "train_dataset": dataset["train"] if training_args.do_train else None,
+        "eval_dataset": dataset["validation"] if training_args.do_eval else None,
+        "tokenizer": image_processor,
+        "data_collator": collate_fn,
+        "compute_metrics": eval_compute_metrics_fn,
+    }
+
+    if use_habana:
+        trainer_kwargs.append({ "gaudi_config": gaudi_config })
+        trainer = GaudiTrainer(**trainer_kwargs)
+    else:
+        trainer = Trainer(**trainer_kwargs)
 
     # Training
     if training_args.do_train:
