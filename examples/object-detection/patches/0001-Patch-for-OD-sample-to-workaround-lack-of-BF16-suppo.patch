@@ -1,0 +1,26 @@
+From 5ca6d2ff0ce457ed786cee5bd7d94aa37753acff Mon Sep 17 00:00:00 2001
+From: Sandeep Maddipatla <sandeep.maddipatla@intel.com>
+Date: Fri, 31 May 2024 21:11:14 +0000
+Subject: [PATCH] Patch for OD-sample to workaround lack of BF16 support in
+ numpy
+
+---
+ examples/object-detection/modeling_detr.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/examples/object-detection/modeling_detr.py b/examples/object-detection/modeling_detr.py
+index 37da6b6..9a70f4d 100644
+--- a/examples/object-detection/modeling_detr.py
++++ b/examples/object-detection/modeling_detr.py
+@@ -2201,7 +2201,7 @@ class DetrHungarianMatcher(nn.Module):
+ 
+         # Final cost matrix
+         cost_matrix = self.bbox_cost * bbox_cost + self.class_cost * class_cost + self.giou_cost * giou_cost
+-        cost_matrix = cost_matrix.view(batch_size, num_queries, -1).cpu()
++        cost_matrix = cost_matrix.view(batch_size, num_queries, -1).to(torch.float32).cpu()
+ 
+         sizes = [len(v["boxes"]) for v in targets]
+         indices = [linear_sum_assignment(c[i]) for i, c in enumerate(cost_matrix.split(sizes, -1))]
+-- 
+2.34.1
+
