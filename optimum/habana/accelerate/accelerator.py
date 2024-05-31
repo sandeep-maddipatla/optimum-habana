@@ -109,6 +109,8 @@ class GaudiAccelerator(Accelerator):
         dynamo_backend: GaudiDynamoBackend | str | None = None,
         distribution_strategy: str = None,
         force_autocast: bool = False,
+        non_blocking: bool = False,
+        gradient_accumulation_kwargs: str = None,
     ):
         self.trackers = []
         if project_config is not None:

@@ -46,7 +46,8 @@ def get_dtype(logits: Union[torch.Tensor, Tuple[torch.Tensor]]) -> Union[str, Li
     else:
         raise TypeError(f"logits should be of type torch.Tensor or tuple, got {type(logits)} which is not supported")
 
-
+import sys
+import pdb
 def convert_into_dtypes(
     preds: Union[np.ndarray, Tuple[np.ndarray]], dtype: str
 ) -> Union[np.ndarray, Tuple[np.ndarray]]:
@@ -64,11 +65,18 @@ def convert_into_dtypes(
         Union[np.ndarray, Tuple[np.ndarray]]: converted preds
     """
     if isinstance(preds, np.ndarray):
-        if preds.dtype == dtype:
+        if preds.dtype == dtype or isinstance(dtype, dict):
             return preds
         else:
             return preds.astype(dtype)
     elif isinstance(preds, tuple):
         return tuple(convert_into_dtypes(preds_tensor, dtype) for preds_tensor in preds)
+    elif isinstance(preds, list):
+        return [convert_into_dtypes(preds_tensor, dtype) for preds_tensor in preds]
+    elif isinstance(preds, dict):
+        res_dict = {}
+        for key in preds.keys():
+            res_dict.update({key:  convert_into_dtypes(preds[key], dtype[key])})
+        return res_dict
     else:
         raise TypeError(f"preds should be of type np.ndarray or tuple, got {type(preds)} which is not supported")
