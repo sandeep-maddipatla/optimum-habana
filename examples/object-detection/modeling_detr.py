@@ -2201,7 +2201,7 @@ class DetrHungarianMatcher(nn.Module):
 
         # Final cost matrix
         cost_matrix = self.bbox_cost * bbox_cost + self.class_cost * class_cost + self.giou_cost * giou_cost
-        cost_matrix = cost_matrix.view(batch_size, num_queries, -1).cpu()
+        cost_matrix = cost_matrix.view(batch_size, num_queries, -1).to(torch.float32).cpu()
 
         sizes = [len(v["boxes"]) for v in targets]
         indices = [linear_sum_assignment(c[i]) for i, c in enumerate(cost_matrix.split(sizes, -1))]
