@@ -367,7 +367,6 @@ def main():
             training_args.gaudi_config_name,
             cache_dir=model_args.cache_dir,
             revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
         )
 
     # Setup logging
@@ -526,7 +525,7 @@ def main():
     }
 
     if use_habana:
-        trainer_kwargs.append({ "gaudi_config": gaudi_config })
+        trainer_kwargs.update({ "gaudi_config": gaudi_config })
         trainer = GaudiTrainer(**trainer_kwargs)
     else:
         trainer = Trainer(**trainer_kwargs)

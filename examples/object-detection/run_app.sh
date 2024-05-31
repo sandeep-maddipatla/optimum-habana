@@ -38,7 +38,6 @@ CMDLINE="run_object_detection.py \
     --output_dir ${OUTDIR} \
     --num_train_epochs ${EPOCHS} \
     --image_square_size 600 \
-    --bf16 true \
     --learning_rate 5e-5 \
     --weight_decay 1e-4 \
     --dataloader_num_workers 4 \
@@ -60,7 +59,7 @@ CMDLINE="run_object_detection.py \
 
 [[ ${MAX_TRAIN_SAMPLES} != "" ]] && CMDLINE="${CMDLINE} --max_train_samples ${MAX_TRAIN_SAMPLES}"
 [[ ${MAX_EVAL_SAMPLES} != "" ]] && CMDLINE="${CMDLINE} --max_eval_samples ${MAX_EVAL_SAMPLES}"
-[[ ${USE_CPU} == "no" ]] && CMDLINE="${CMDLINE} --use_habana  --use_lazy_mode --use_hpu_graphs_for_inference --gaudi_config_name ${GAUDI_CONFIG_NAME}  --throughput_warmup_steps 3"
+[[ ${USE_CPU} == "no" ]] && CMDLINE="${CMDLINE} --use_habana  --use_lazy_mode --gaudi_config_name ${GAUDI_CONFIG_NAME}  --throughput_warmup_steps 3"
 [[ ${IMAGE_PROCESSOR_NAME} != "" ]] && CMDLINE="${CMDLINE} --image_processor_name=${IMAGE_PROCESSOR_NAME}"
 
 if [[ ${WORLD_SIZE} -eq 1 ]]
