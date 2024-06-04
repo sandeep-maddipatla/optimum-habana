@@ -53,6 +53,8 @@ except ImportError:
     def check_optimum_habana_min_version(*a, **b):
         return ()
 
+from PIL import Image, ImageDraw
+
 logger = logging.getLogger(__name__)
 
 # Will error if the minimal version of Transformers and Optimum Habana are not installed. Remove at your own risks.
@@ -171,6 +173,9 @@ def compute_metrics(
     image_processor: AutoImageProcessor,
     threshold: float = 0.0,
     id2label: Optional[Mapping[int, str]] = None,
+    print_summary: bool = False,
+    generate_visualization: bool = False,
+    outdir: str = None
 ) -> Mapping[str, float]:
     """
     Compute mean average mAP, mAR and their variants for the object detection task.
@@ -184,7 +189,29 @@ def compute_metrics(
         Mapping[str, float]: Metrics in a form of dictionary {<metric_name>: <metric_value>}
     """
 
+    def print_predictions(results):
+        for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
+            box = [round(i, 2) for i in box.tolist()]
+            print(
+                f"Detected {id2label[label.item()]} with confidence "
+                f"{round(score.item(), 3)} at location {box}"
+            )
+
+    def gen_annotated_image(results, np_image):
+        np_adjusted_image = (np_image * 255).transpose(1,2,0).astype(np.uint8)
+        image = Image.fromarray(np_adjusted_image, mode='RGB')
+        draw = ImageDraw.Draw(image)
+        for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
+            box = [round(i, 2) for i in box.tolist()]
+            x, y, x2, y2 = tuple(box)
+            draw.rectangle((x, y, x2, y2), outline="red", width=1)
+            draw.text((x, y), id2label[label.item()], fill="white")
+
+        image.save(os.path.join(outdir, f'image_{compute_metrics.images}.png'))
+        compute_metrics.images += 1
+
     predictions, targets = evaluation_results.predictions, evaluation_results.label_ids
+    inputs = iter(evaluation_results.inputs) if evaluation_results.inputs is not None else None
 
     # For metric computation we need to provide:
     #  - targets in a form of list of dictionaries with keys "boxes", "labels"
@@ -217,6 +244,18 @@ def compute_metrics(
         post_processed_output = image_processor.post_process_object_detection(
             output, threshold=threshold, target_sizes=target_sizes
         )
+
+        if print_summary:
+            # post_processed_output has results for one batch of images
+            for image_output in post_processed_output:
+                print_predictions(image_output)
+
+        if generate_visualization:
+            if inputs is not None:
+                image_batch = iter(next(inputs))
+                for image_output in post_processed_output:
+                    gen_annotated_image(image_output, next(image_batch))
+
         post_processed_predictions.extend(post_processed_output)
 
     # Compute metrics
@@ -279,6 +318,9 @@ class DataTrainingArguments:
                 "value if set."
             )
         },
+    )
+    detection_threshold: Optional[float] = field(
+        default=0.5, metadata={"help": "Min confidence for a prediction to be used. Only for inference mode."}
     )
 
 
@@ -510,8 +552,17 @@ def main():
     # Model training and evaluation with Trainer API
     # ------------------------------------------------------------------------------------------------
 
+    inference_only = training_args.do_eval and not training_args.do_train
+    if inference_only:
+        training_args.include_inputs_for_metrics = True
+
+    compute_metrics.images = 0
     eval_compute_metrics_fn = partial(
-        compute_metrics, image_processor=image_processor, id2label=id2label, threshold=0.0
+        compute_metrics, image_processor=image_processor, id2label=id2label,
+        threshold=data_args.detection_threshold if inference_only else 0.0,
+        print_summary = inference_only,
+        generate_visualization = inference_only,
+        outdir = training_args.output_dir if inference_only else None,
     )
 
     trainer_kwargs = {

@@ -33,7 +33,7 @@ GAUDI_CONFIG_NAME=Habana/vit
 CMDLINE="run_object_detection.py \
     --model_name_or_path ${MODEL} \
     --dataset_name ${DATASET} \
-    --do_train true \
+    --do_train false \
     --do_eval true \
     --output_dir ${OUTDIR} \
     --num_train_epochs ${EPOCHS} \
