@@ -188,6 +188,8 @@ from .models import (
     gaudi_cohere_model_forward,
     gaudi_conv1d_forward,
     gaudi_DetrConvModel_forward,
+    gaudi_DetrHungarianMatcher_forward,
+    gaudi_DetrLoss_loss_labels,
     gaudi_esm_for_protein_folding_forward,
     gaudi_esmfolding_trunk_forward,
     gaudi_falcon_linear_forward,
@@ -709,3 +711,7 @@ def adapt_transformers_to_gaudi():
     transformers.AutoConfig.register("baichuan", BaichuanConfig)
     transformers.AutoTokenizer.register(BaichuanConfig, slow_tokenizer_class=BaichuanTokenizer)
     transformers.AutoModelForCausalLM.register(BaichuanConfig, BaichuanForCausalLM)
+    # Optimization for DETR model on Gaudi
+    transformers.models.detr.modeling_detr.DetrConvModel.forward = gaudi_DetrConvModel_forward
+    transformers.models.detr.modeling_detr.DetrHungarianMatcher.forward = gaudi_DetrHungarianMatcher_forward
+    transformers.models.detr.modeling_detr.DetrLoss.loss_labels = gaudi_DetrLoss_loss_labels
