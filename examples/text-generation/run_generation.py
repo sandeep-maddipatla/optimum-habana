@@ -20,6 +20,7 @@ Conditional text generation on Habana Gaudi/Gaudi2.
 
 import argparse
 import json
+import re
 import logging
 import math
 import os
@@ -32,7 +33,6 @@ from transformers import BatchEncoding
 from utils import adjust_batch, count_hpu_graphs, finalize_quantization, initialize_model
 
 from optimum.habana.utils import get_hpu_memory_stats
-
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -149,6 +149,18 @@ def setup_parser(parser):
         type=str,
         nargs="*",
         help='Optional argument to give a prompt of your choice as input. Can be a single string (eg: --prompt "Hello world"), or a list of space-separated strings (eg: --prompt "Hello world" "How are you?")',
+    )
+    parser.add_argument(
+        "--prompt_jsfile",
+        default="prompts.js",
+        type=str,
+        help='Optional argument to specify a file in Javascript format, with key-value pairs containing strings to be used as prompts")',
+    )
+    parser.add_argument(
+        "--prompt_jskey",
+        default=None,
+        type=str,
+        help='Optional argument to give a key of your choice as input. Reads file specified by prompt-jsfile and fetches the string for the provided key to be used as the prompt ")',
     )
     parser.add_argument(
         "--bad_words",
@@ -377,6 +389,42 @@ def prepare_generation_embedding(model, model_name, input_tokens):
     attention_mask = input_tokens["attention_mask"]
     return {"inputs_embeds": inputs_embeds, "attention_mask": attention_mask}
 
+def get_prompt_from_js(key=None, filename='prompts.js'):
+    if not key:
+        return None
+
+    with open(filename) as dataFile:
+        js_content = dataFile.read()
+
+    var_pattern = r'\s*(var|let|const)\s+(\w+)\s*=\s*(.*?);'
+    
+    # Find all matches in the JavaScript content
+    matches = re.findall(var_pattern, js_content, re.DOTALL)
+    
+    # Create a dictionary to store extracted variables
+    extracted_vars = {}
+    
+    for match in matches:
+        # Extract the variable name and its value
+        var_name = match[1]
+        var_value = match[2].strip()
+
+        # If the value looks like a JSON object or array, try to parse it
+        try:
+            # Try parsing it as JSON if it looks like a JSON structure
+            var_value = json.loads(var_value)  # If it's a JSON-like string, parse it
+        except json.JSONDecodeError:
+            # If it's not a JSON structure, leave it as a string
+            pass
+        
+        extracted_vars[var_name] = var_value
+
+    if key not in extracted_vars.keys():
+        print(f'Given key {key} not in {filename}')
+        print(f'Available keys = {extracted_vars.keys()}')
+        return None
+    else:
+        return [extracted_vars[key]]
 
 def main():
     parser = argparse.ArgumentParser()
@@ -386,6 +434,8 @@ def main():
     use_lazy_mode = True
     if args.torch_compile:
         use_lazy_mode = False
+    if args.prompt_jskey:
+        args.prompt = get_prompt_from_js(key=args.prompt_jskey, filename=args.prompt_jsfile)
 
     import habana_frameworks.torch.hpu as torch_hpu
 
