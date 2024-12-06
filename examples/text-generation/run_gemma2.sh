@@ -8,6 +8,7 @@ HL_SMI_LOG="hlsmi.log"
 OUTPUT_DIR=${OUTPUT_DIR:-output}
 OUTPUT_DIR=${OUTPUT_DIR}_$(date +%h_%d_%H_%M_%S)
 rm -r ${OUTPUT_DIR}
+rm -rf hpu_profile
 rm -f *.log *.json *.gz *.hltv
 mkdir -p ${OUTPUT_DIR}
 
@@ -15,8 +16,8 @@ pkill hl-smi 2>/dev/null
 rm -f ${HL_SMI_LOG} 2>/dev/null0
 rm -f /root/metricslog.json
 
-START_TIME=$(date)q
-${HL_SMI_CMD} 2>&1 > ${HL_SMI_LOG} &lsfid
+START_TIME=$(date)
+${HL_SMI_CMD} 2>&1 > ${HL_SMI_LOG} &
 
 python run_generation.py \
 --model_name_or_path ${MODEL:-google/gemma-2-9b-it} \
@@ -28,13 +29,12 @@ python run_generation.py \
 --do_sample \
 --prompt_jskey ${PROMPT:-LLAMA_2048} \
 --profiling_warmup_steps ${PROFILING_WARMUP_STEPS:-10} \
---profiling_steps ${PROFILING_STEPS:-40}
+--profiling_steps ${PROFILING_STEPS:-40} | 
+tee run_gen.log
 
 ##prompt ${PROMPT:-"What is the capital of France"}
 
 pkill hl-smi
-
-python3 script/throughput.py summary.json 2>&1 | tee summary.log
 
 # Gather outputs list
 env > env.log
@@ -45,6 +45,7 @@ mv *.hltv ${OUTPUT_DIR} 2>/dev/null
 mv /root/metricslog.json ${OUTPUT_DIR} 2>/dev/nullq
 cp -r $(pwd)/script ${OUTPUT_DIR} 2>/dev/null
 mv ${HL_SMI_LOG} ${OUTPUT_DIR} 2>/dev/null
+mv hpu_profile ${OUTPUT_DIR} 2>/dev/null
 
 END_TIME=$(date)
 echo START ${START_TIME} | tee ${OUTPUT_DIR}/time.log
