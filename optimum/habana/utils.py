@@ -307,7 +307,7 @@ class HabanaProfile(object):
                 activities=activities,
                 on_trace_ready=torch.profiler.tensorboard_trace_handler(output_dir),
                 record_shapes=record_shapes,
-                with_stack=with_stack,
+                with_stack=True,
             )
             self.start = profiler.start
             self.stop = profiler.stop
