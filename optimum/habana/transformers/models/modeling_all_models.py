@@ -239,15 +239,22 @@ def gaudi_check_and_enable_sdpa(cls, config, hard_check_only: bool = False) -> P
 
     return config
 
+# Copied from https://github.com/huggingface/transformers/blob/fb0c6b521db0db23fcaf475fc4696594b52e101c/src/transformers/modeling_utils.py
+# Temporary WA to failure observed with newer version of the code
 def gaudi_init_added_embeddings_weights_with_mean(
-    self, old_embeddings, new_embeddings, old_embedding_dim, old_num_tokens, added_num_tokens     
+    self, old_embeddings, new_embeddings, old_embedding_dim, old_num_tokens, added_num_tokens
 ):
     old_embeddings_weight = old_embeddings.weight.data.to(torch.float32)
     mean_embeddings = torch.mean(old_embeddings_weight, axis=0)
     old_centered_embeddings = old_embeddings_weight - mean_embeddings
     covariance = old_centered_embeddings.T @ old_centered_embeddings / old_num_tokens
 
+
     # Check if the covariance is positive definite.
+    print(f'covariance.type() = {covariance.type()}')
+    import pdb; pdb.set_trace()
+    x = torch.linalg.eigvals(covariance)
+    print(f'type(x) = {type(x)}')
     is_covariance_psd = bool(
         (covariance == covariance.T).all() and (torch.linalg.eigvals(covariance).real >= 0).all()
     )
