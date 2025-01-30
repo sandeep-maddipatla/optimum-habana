@@ -186,6 +186,7 @@ from .models import (
     gaudi_bloom_convert_to_standard_cache,
     gaudi_bloom_model_forward,
     gaudi_check_and_enable_sdpa,
+    gaudi_init_added_embeddings_weights_with_mean,
     gaudi_codegen_block_forward,
     gaudi_codegen_model_forward,
     gaudi_cohere_model_forward,
@@ -382,6 +383,7 @@ def adapt_transformers_to_gaudi():
 
     # Override sdpa check on Gaudi
     transformers.modeling_utils.PreTrainedModel._check_and_enable_sdpa = gaudi_check_and_enable_sdpa
+    transformers.modeling_utils.PreTrainedModel._init_added_embeddings_weights_with_mean = gaudi_init_added_embeddings_weights_with_mean
 
     # AlbertModel.forward does not rely on get_extended_attention_mask so it also needs to be replaced
     transformers.models.albert.modeling_albert.AlbertModel.forward = gaudi_albert_forward
