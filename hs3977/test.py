@@ -14,9 +14,9 @@ test_tensor = torch.rand([2,3], dtype=torch.float).to('hpu')
 print(f'weight = {weight}')
 print(f'test_tensor = {test_tensor}')
 
-print("FusedRMSNorm fast path")
-result = HPUFusedRMSNorm.apply(test_tensor, weight, 1e-06, True, 0, True)
-print(result)
+#print("FusedRMSNorm fast path")
+#result = HPUFusedRMSNorm.apply(test_tensor, weight, 1e-06, True, 0, True)
+#print(result)
 
 print("FusedRMSNorm default path")
 result = HPUFusedRMSNorm.apply(test_tensor, weight, 1e-06, True, 0, False)
