@@ -6,7 +6,7 @@
     "configurations": [
 
         {
-            "name": "hs-4763",
+            "name": "hs-3977",
             "type": "debugpy",
             "request": "launch",
             "program": "test.py",
