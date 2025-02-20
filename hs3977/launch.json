@@ -14,7 +14,10 @@
             "cwd": "/root/repos/npu-stack",
             "args": [
             ],
-            "env": {},
+            "env": {
+                "LOG_LEVEL_ALL": "0",
+                "ENABLE_CONSOLE": "true"
+            },
             "justMyCode": false,
             "python": "/usr/bin/python3"
         }
