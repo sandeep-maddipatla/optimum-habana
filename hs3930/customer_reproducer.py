@@ -49,13 +49,14 @@ class MinimalModel(nn.Module):
 
 model = MinimalModel().to(device)
 if os.getenv('PT_HPU_LAZY_MODE') != '1' and os.getenv('DEVICE')=='hpu':
+    #pass
     model = torch.compile(model, backend="hpu_backend")
 
 loss_func = nn.MSELoss()
 
 X = np.array([[1.05, 0.95], [0.95, 1.05]])
 y = np.array([1.0, -1.0])
-epoch_nums = 1000
+epoch_nums = 2
 
 X = torch.tensor(X).to(device, dtype=torch.float32)
 y = torch.tensor(y).to(device, dtype=torch.float32)
@@ -74,6 +75,7 @@ for epoch in pbar:
     optimizer.zero_grad()
     out = model(X)
     loss = loss_func(out, y)
+    print(f'loss = {loss}')
     loss_list.append(loss.item())
     pbar.set_postfix({'loss': loss.item()})
     detached_state_dict = {}
