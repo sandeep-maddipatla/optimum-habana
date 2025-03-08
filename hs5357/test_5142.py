@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 import habana_frameworks.torch.core as htcore
 import habana_frameworks.torch.hpu.random as htrandom
+import argparse
 
 def is_lazy():
     return os.getenv("PT_HPU_LAZY_MODE", "1") != "0"
@@ -54,7 +55,7 @@ class CNN_BN(nn.Module):
 
 ################################################
 
-def run():
+def run(drop_last=False):
     device = "hpu"
     mean = (0.4914, 0.4822, 0.4465)
     std = (0.2023, 0.1994, 0.2010)
@@ -62,9 +63,9 @@ def run():
         transforms.ToTensor(),
         transforms.Normalize(mean, std),
     ])
-
+    print(f'drop_last = {drop_last}')
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
-    train_loader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, drop_last=False)
+    train_loader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, drop_last=drop_last)
 
     # model = CNN().to(device)
     model = CNN_BN().to(device)
@@ -94,8 +95,16 @@ def run():
         }, filename)
 
     print('--------------Train Finished--------------')
-    
+
+def get_args():
+    parser = argparse.ArgumentParser(description='Args for run script')
+    parser.add_argument('--drop-last', action='store_true', help='Enabled drop_last WA for HS-5142')
+    args = parser.parse_args()
+    return args
+
 if __name__=='__main__':
+    args = get_args()
+
     # set seeds
     torch.set_num_threads(1)
     seed = 42
@@ -106,4 +115,4 @@ if __name__=='__main__':
     htrandom.set_rng_state(state)
     initial_seed = htrandom.initial_seed()
     htrandom.manual_seed(seed)
-    run()
+    run(drop_last=args.drop_last)
