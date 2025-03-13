@@ -13,10 +13,11 @@
             "console": "integratedTerminal",
             "cwd": "/root/repos/npu-stack",
             "args": [
+                "--drop-last"
             ],
             "env": {
-                "LOG_LEVEL_ALL": "0",
-                "ENABLE_CONSOLE": "true"
+                "ENABLE_CONSOLE": "true",
+                "PT_HPU_LAZY_MODE": "0"
             },
             "justMyCode": false,
             "python": "/usr/bin/python3"
