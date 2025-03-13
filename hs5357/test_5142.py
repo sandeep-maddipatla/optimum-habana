@@ -55,7 +55,7 @@ class CNN_BN(nn.Module):
 
 ################################################
 
-def run(drop_last=False):
+def run(drop_last=False, skip_torch_compile=False):
     device = "hpu"
     mean = (0.4914, 0.4822, 0.4465)
     std = (0.2023, 0.1994, 0.2010)
@@ -63,7 +63,7 @@ def run(drop_last=False):
         transforms.ToTensor(),
         transforms.Normalize(mean, std),
     ])
-    print(f'drop_last = {drop_last}')
+    print(f'drop_last = {drop_last}, skip_torch_compile = {skip_torch_compile}')
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, drop_last=drop_last)
 
@@ -71,7 +71,7 @@ def run(drop_last=False):
     model = CNN_BN().to(device)
     
     print('Is Lazy:', is_lazy())
-    if not is_lazy():
+    if not is_lazy() and not skip_torch_compile:
         model = torch.compile(model, backend="hpu_backend")
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.SGD(model.parameters(), lr=0.001, weight_decay=0, momentum=0.9)
@@ -99,6 +99,7 @@ def run(drop_last=False):
 def get_args():
     parser = argparse.ArgumentParser(description='Args for run script')
     parser.add_argument('--drop-last', action='store_true', help='Enabled drop_last WA for HS-5142')
+    parser.add_argument('--pure-eager', action='store_true', help='Skip torch.compile in eager mode')
     args = parser.parse_args()
     return args
 
@@ -115,4 +116,4 @@ if __name__=='__main__':
     htrandom.set_rng_state(state)
     initial_seed = htrandom.initial_seed()
     htrandom.manual_seed(seed)
-    run(drop_last=args.drop_last)
+    run(drop_last=args.drop_last, skip_torch_compile=args.pure_eager)
