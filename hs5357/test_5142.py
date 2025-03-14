@@ -63,11 +63,8 @@ def run(drop_last=False, skip_torch_compile=False):
         transforms.ToTensor(),
         transforms.Normalize(mean, std),
     ])
-    print(f'drop_last = {drop_last}, skip_torch_compile = {skip_torch_compile}')
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, drop_last=drop_last)
-
-    # model = CNN().to(device)
     model = CNN_BN().to(device)
     
     print('Is Lazy:', is_lazy())
