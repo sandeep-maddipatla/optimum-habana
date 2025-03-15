@@ -65,7 +65,7 @@ def run(drop_last=False, skip_torch_compile=False):
     ])
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, drop_last=drop_last)
-    model = CNN_BN().to(device)
+    model = CNN().to(device)
     
     print('Is Lazy:', is_lazy())
     if not is_lazy() and not skip_torch_compile:
@@ -84,12 +84,15 @@ def run(drop_last=False, skip_torch_compile=False):
         htcore.mark_step()
         optimizer.step()
         htcore.mark_step()
+        break
    
     os.makedirs('./save', exist_ok=True)
     filename = os.path.join('./save', 'last_ckpt.pth')
-    torch.save({
+    saved_model_dict = {
             'state_dict': model.state_dict(),
-        }, filename)
+        }
+    #print(f'saved_model_dict = {saved_model_dict}')
+    torch.save(saved_model_dict, filename)
 
     print('--------------Train Finished--------------')
 
