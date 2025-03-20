@@ -72,21 +72,17 @@ def run(drop_last=False, skip_torch_compile=False):
         checkpoint = torch.load(load_filename, map_location=device)
         state_dict = {k.replace('_orig_mod.', '').replace('module.', ''): v for k, v in checkpoint['state_dict'].items()} # state_dict may have torch.compile module names
         model.load_state_dict(state_dict)
-        print(f'model = {model}')
-        print(f'model.state_dict() = {model.state_dict()}')
+        print(f'Loaded model state_dict from {load_filename} successfully')
     except Exception as e:
         print(f'Failed to load state_dict: {e}')
         print('Warning: Skipped state_dict load attempt')
     model = model.to(device)
-    print(f'model = {model}')
-    print(f'model.state_dict() = {model.state_dict()}')
 
     print('Is Lazy:', is_lazy())
     if not is_lazy() and not skip_torch_compile:
         model = torch.compile(model, backend="hpu_backend")
         print('Using eager with torch.compile')
-        print(f'TC model = {model}')
-        print(f'TCmodel.state_dict() = {model.state_dict()}')
+
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.SGD(model.parameters(), lr=0.001, weight_decay=0, momentum=0.9)
     
