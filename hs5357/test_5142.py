@@ -65,24 +65,11 @@ def run(drop_last=False, skip_torch_compile=False):
     ])
     trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
     train_loader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, drop_last=drop_last)
-
-    model = CNN()
-    try:
-        load_filename = os.path.join('./save', 'last_ckpt.pth')
-        checkpoint = torch.load(load_filename, map_location=device)
-        state_dict = {k.replace('_orig_mod.', '').replace('module.', ''): v for k, v in checkpoint['state_dict'].items()} # state_dict may have torch.compile module names
-        model.load_state_dict(state_dict)
-        print(f'Loaded model state_dict from {load_filename} successfully')
-    except Exception as e:
-        print(f'Failed to load state_dict: {e}')
-        print('Warning: Skipped state_dict load attempt')
-    model = model.to(device)
-
+    model = CNN().to(device)
+    
     print('Is Lazy:', is_lazy())
     if not is_lazy() and not skip_torch_compile:
         model = torch.compile(model, backend="hpu_backend")
-        print('Using eager with torch.compile')
-
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.SGD(model.parameters(), lr=0.001, weight_decay=0, momentum=0.9)
     
@@ -97,16 +84,15 @@ def run(drop_last=False, skip_torch_compile=False):
         htcore.mark_step()
         optimizer.step()
         htcore.mark_step()
+        break
    
-
-    #Explicitly move model to cpu before saving
-    model.cpu()
-
     os.makedirs('./save', exist_ok=True)
     filename = os.path.join('./save', 'last_ckpt.pth')
-    torch.save({
+    saved_model_dict = {
             'state_dict': model.state_dict(),
-        }, filename)
+        }
+    #print(f'saved_model_dict = {saved_model_dict}')
+    torch.save(saved_model_dict, filename)
 
     print('--------------Train Finished--------------')
 
