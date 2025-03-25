@@ -13,7 +13,7 @@
             "console": "integratedTerminal",
             "cwd": "/root/repos/npu-stack",
             "args": [
-                "--drop-last"
+                "--drop-last --pure-eager"
             ],
             "env": {
                 "ENABLE_CONSOLE": "true",
