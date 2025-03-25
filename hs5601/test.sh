@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
 localdir=$(pwd)
-logfile=${1:-${logdir}/hs5601_logfile.log}
+logfile=${1:-${localdir}/hs5601_logfile.log}
 workdir=${HOME}/optimum-habana/examples/image-classification
 
 cd ${workdir}
