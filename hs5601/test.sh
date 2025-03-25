@@ -1,15 +1,14 @@
 #!/bin/bash
 set -x
 localdir=$(pwd)
-logdir=${1:-${localdir}}
-logfile=$(echo $logdir)_logfile.log
+logfile=${1:-${logdir}/hs5601_logfile.log}
 workdir=${HOME}/optimum-habana/examples/image-classification
 
 cd ${workdir}
 pip install -r requirements.txt
 pip install optimum-habana
 pip list | grep habana
-python run_image_classification.py \
+PT_HPU_LAZY_MODE=0 python run_image_classification.py \
   --model_name_or_path google/vit-base-patch16-224-in21k \
   --dataset_name cifar10 \
   --image_column_name img \
@@ -31,3 +30,4 @@ python run_image_classification.py \
   --gaudi_config_name Habana/vit 2>&1 | tee ${logfile}
 
 cd ${localdir}
+chmod 777 ${logfile}
