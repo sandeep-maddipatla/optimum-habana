@@ -9,9 +9,12 @@ cd ${workdir}
 pip install -r requirements.txt
 pip install optimum-habana
 pip list | grep habana
-python run_timm_example.py \
+python run_image_classification.py \
   --model_name_or_path google/vit-base-patch16-224-in21k \
   --dataset_name cifar10 \
+  --image_column_name img \
+  --remove_unused_columns False \
+  --overwrite_output_dir \
   --do_train --do_eval \
   --learning_rate 3e-5 \
   --num_train_epochs 5 \
@@ -21,9 +24,9 @@ python run_timm_example.py \
   --output_dir /tmp/outputs/ \
   --bf16 \
   --torch_compile True \
-  --use_habana \
-  --use_hpu_graphs \
   --use_lazy_mode False \
+  --torch_compile_backend hpu_backend \
+  --use_habana \
   --throughput_warmup_steps 6 \
   --gaudi_config_name Habana/vit 2>&1 | tee ${logfile}
 
