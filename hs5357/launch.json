@@ -13,10 +13,10 @@
             "console": "integratedTerminal",
             "cwd": "/root/repos/npu-stack",
             "args": [
-                "--drop-last --pure-eager"
+                "--drop-last",
+                "--pure-eager"
             ],
             "env": {
-                "ENABLE_CONSOLE": "true",
                 "PT_HPU_LAZY_MODE": "0"
             },
             "justMyCode": false,
