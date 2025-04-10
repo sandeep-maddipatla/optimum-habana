@@ -1,0 +1,115 @@
+node {
+  name: "0"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 1
+        }
+        dim {
+          size: 1
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
+node {
+  name: "1"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 1
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
+node {
+  name: "TPC209"
+  op: "mult_fwd_f32"
+  input: "0"
+  input: "1"
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "0"
+    }
+  }
+  attr {
+    key: "inputTensor:0"
+    value {
+      s: "0  |  Sizes = [1,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [4, 4, 4]  |  data = 0, sizeInBytes = 4  |  isPersistent  |  userMemorySection(type=Persistent, id=4)  |  "
+    }
+  }
+  attr {
+    key: "inputTensor:1"
+    value {
+      s: "1  |  Sizes = [1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [4, 4]  |  data = 0, sizeInBytes = 4  |  isPersistent  |  userMemorySection(type=Persistent, id=5)  |  "
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "3  |  Sizes = [1,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [4, 4, 4]  |  data = 0, sizeInBytes = 4  |  isPersistent  |  userMemorySection(type=Persistent, id=6)  |  "
+    }
+  }
+}
+node {
+  name: "3"
+  op: "OutputTensor"
+  input: "TPC209"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 1
+        }
+        dim {
+          size: 1
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}

@@ -1,0 +1,535 @@
+node {
+  name: "TPC71"
+  op: "constant_f32"
+  attr {
+    key: "Bundle_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "0"
+    }
+  }
+  attr {
+    key: "Op_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "2  |  Sizes = [1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [4, 4]  |  data = 0, sizeInBytes = 4  |  isPersistent  |  location = in DRAM  |  dramOffset = 0x40000000000  |  userMemorySection(type=Persistent, id=4)  |  "
+    }
+  }
+}
+node {
+  name: "5"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 1
+        }
+        dim {
+          size: 2
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
+node {
+  name: "Reshape72"
+  op: "Reshape"
+  input: "5"
+  attr {
+    key: "Bundle_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "1"
+    }
+  }
+  attr {
+    key: "Op_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "inputTensor:0"
+    value {
+      s: "5  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  isPersistent  |  location = in DRAM  |  dramOffset = 0x60000000000  |  userMemorySection(type=Persistent, id=6)  |  "
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "6  |  Sizes = [2]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4]  |  data = 0, sizeInBytes = 8  |  isAliased = 5, offset: 0  |  location = in DRAM  |  "
+    }
+  }
+}
+node {
+  name: "7"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 2
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
+node {
+  name: "TPC73"
+  op: "mse_loss_bwd_f32"
+  input: "TPC71"
+  input: "Reshape72"
+  input: "7"
+  attr {
+    key: "Bundle_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "2"
+    }
+  }
+  attr {
+    key: "Op_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "inputTensor:0"
+    value {
+      s: "2  |  Sizes = [1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [4, 4]  |  data = 0, sizeInBytes = 4  |  isPersistent  |  location = in DRAM  |  dramOffset = 0x40000000000  |  userMemorySection(type=Persistent, id=4)  |  "
+    }
+  }
+  attr {
+    key: "inputTensor:1"
+    value {
+      s: "6  |  Sizes = [2]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4]  |  data = 0, sizeInBytes = 8  |  isAliased = 5, offset: 0  |  location = in DRAM  |  "
+    }
+  }
+  attr {
+    key: "inputTensor:2"
+    value {
+      s: "7  |  Sizes = [2]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4]  |  data = 0, sizeInBytes = 8  |  isPersistent  |  location = in DRAM  |  dramOffset = 0x70000000000  |  userMemorySection(type=Persistent, id=7)  |  "
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "8  |  Sizes = [2]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4]  |  data = 0, sizeInBytes = 8  |  isAliased = 9, offset: 0  |  location = in DRAM  |  "
+    }
+  }
+}
+node {
+  name: "gradient/linear2/reshape/3"
+  op: "Reshape"
+  input: "TPC73"
+  attr {
+    key: "Bundle_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "3"
+    }
+  }
+  attr {
+    key: "Op_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "inputTensor:0"
+    value {
+      s: "8  |  Sizes = [2]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4]  |  data = 0, sizeInBytes = 8  |  isAliased = 9, offset: 0  |  location = in DRAM  |  "
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "9  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  location = in DRAM  |  dramOffset = 0x0  |  "
+    }
+  }
+}
+node {
+  name: "10"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 1
+        }
+        dim {
+          size: 2
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
+node {
+  name: "gradient/linear2/linear_temp_bwd_f32/4_complex/gemm_0"
+  op: "GEMM"
+  input: "gradient/linear2/reshape/3"
+  input: "10"
+  attr {
+    key: "Bundle_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "4"
+    }
+  }
+  attr {
+    key: "Op_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Parameters"
+    value {
+      s: "transpose_a=true, transpose_b=false"
+    }
+  }
+  attr {
+    key: "inputTensor:0"
+    value {
+      s: "9  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  location = in DRAM  |  dramOffset = 0x0  |  "
+    }
+  }
+  attr {
+    key: "inputTensor:1"
+    value {
+      s: "10  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  isPersistent  |  location = in DRAM  |  dramOffset = 0x80000000000  |  userMemorySection(type=Persistent, id=8)  |  "
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "15  |  Sizes = [1,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [4, 4, 4]  |  data = 0, sizeInBytes = 4  |  isPersistent  |  location = in DRAM  |  dramOffset = 0x50000000000  |  userMemorySection(type=Persistent, id=5)  |  "
+    }
+  }
+}
+node {
+  name: "15"
+  op: "OutputTensor"
+  input: "gradient/linear2/linear_temp_bwd_f32/4_complex/gemm_0"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 1
+        }
+        dim {
+          size: 1
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
+node {
+  name: "11"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 1
+        }
+        dim {
+          size: 1
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
+node {
+  name: "gradient/linear2/linear_temp_bwd_f32/4_complex/gemm_1"
+  op: "GEMM"
+  input: "gradient/linear2/reshape/3"
+  input: "11"
+  attr {
+    key: "Bundle_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "5"
+    }
+  }
+  attr {
+    key: "Op_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Parameters"
+    value {
+      s: "transpose_a=false, transpose_b=false"
+    }
+  }
+  attr {
+    key: "inputTensor:0"
+    value {
+      s: "9  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  location = in DRAM  |  dramOffset = 0x0  |  "
+    }
+  }
+  attr {
+    key: "inputTensor:1"
+    value {
+      s: "11  |  Sizes = [1,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [4, 4, 4]  |  data = 0, sizeInBytes = 4  |  isPersistent  |  location = in DRAM  |  dramOffset = 0x90000000000  |  userMemorySection(type=Persistent, id=9)  |  "
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "12  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  location = in DRAM  |  dramOffset = 0x80  |  "
+    }
+  }
+}
+node {
+  name: "gradient/activation/tanh_bwd_f32/6"
+  op: "tanh_bwd_f32"
+  input: "gradient/linear2/linear_temp_bwd_f32/4_complex/gemm_1"
+  input: "10"
+  attr {
+    key: "Bundle_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "6"
+    }
+  }
+  attr {
+    key: "Op_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "inputTensor:0"
+    value {
+      s: "12  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  location = in DRAM  |  dramOffset = 0x80  |  "
+    }
+  }
+  attr {
+    key: "inputTensor:1"
+    value {
+      s: "10  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  isPersistent  |  location = in DRAM  |  dramOffset = 0x80000000000  |  userMemorySection(type=Persistent, id=8)  |  "
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "18  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  isAliased = 12, offset: 0  |  location = in DRAM  |  "
+    }
+  }
+}
+node {
+  name: "19"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 2
+        }
+        dim {
+          size: 2
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
+node {
+  name: "gradient/linear1/linear_temp_bwd_f32/7_complex/gemm_0"
+  op: "GEMM"
+  input: "gradient/activation/tanh_bwd_f32/6"
+  input: "19"
+  attr {
+    key: "Bundle_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "7"
+    }
+  }
+  attr {
+    key: "Op_idx"
+    value {
+      s: "N/A"
+    }
+  }
+  attr {
+    key: "Parameters"
+    value {
+      s: "transpose_a=true, transpose_b=false"
+    }
+  }
+  attr {
+    key: "inputTensor:0"
+    value {
+      s: "18  |  Sizes = [2,1]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 4, 4]  |  data = 0, sizeInBytes = 8  |  isAliased = 12, offset: 0  |  location = in DRAM  |  "
+    }
+  }
+  attr {
+    key: "inputTensor:1"
+    value {
+      s: "19  |  Sizes = [2,2]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [16, 8, 4]  |  data = 0, sizeInBytes = 16  |  isPersistent  |  location = in DRAM  |  dramOffset = 0xb0000000000  |  userMemorySection(type=Persistent, id=11)  |  "
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "24  |  Sizes = [1,2]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [8, 8, 4]  |  data = 0, sizeInBytes = 8  |  isPersistent  |  location = in DRAM  |  dramOffset = 0xa0000000000  |  userMemorySection(type=Persistent, id=10)  |  "
+    }
+  }
+}
+node {
+  name: "24"
+  op: "OutputTensor"
+  input: "gradient/linear1/linear_temp_bwd_f32/7_complex/gemm_0"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 2
+        }
+        dim {
+          size: 1
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
