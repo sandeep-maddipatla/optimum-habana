@@ -1,0 +1,82 @@
+node {
+  name: "0"
+  op: "Placeholder"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 2
+        }
+        dim {
+          size: 2
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
+node {
+  name: "Identity3"
+  op: "Identity"
+  input: "0"
+  attr {
+    key: "Exec_idx"
+    value {
+      s: "0"
+    }
+  }
+  attr {
+    key: "inputTensor:0"
+    value {
+      s: "0  |  Sizes = [2,2]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [16, 8, 4]  |  data = 0, sizeInBytes = 16  |  isPersistent  |  userMemorySection(type=Persistent, id=4)  |  "
+    }
+  }
+  attr {
+    key: "outputTensor:0"
+    value {
+      s: "2  |  Sizes = [2,2]  |  float32  |  expBias = 0, scale = 1  |    |  ModelParam = 0  |  strides = [16, 8, 4]  |  data = 0, sizeInBytes = 16  |  isPersistent  |  userMemorySection(type=Persistent, id=5)  |  "
+    }
+  }
+}
+node {
+  name: "2"
+  op: "OutputTensor"
+  input: "Identity3"
+  attr {
+    key: "dtype"
+    value {
+      type: DT_FLOAT
+    }
+  }
+  attr {
+    key: "shape"
+    value {
+      shape {
+        dim {
+          size: 2
+        }
+        dim {
+          size: 2
+        }
+      }
+    }
+  }
+  attr {
+    key: "synDataType"
+    value {
+      s: "float32"
+    }
+  }
+}
