@@ -26,11 +26,16 @@ def run(device='hpu', skip_torch_compile=False):
         print(f'model = {model}')
 
     # Example input tensor
-    example_input = torch.tensor([1.0, -1.0, 0.0, 0.5], requires_grad=True).to(device)
+    x = torch.tensor([1.0, -1.0, 0.0, 0.5], device=device, requires_grad=True)
+    print(f'x = {x}')
 
     # Forward pass through the model
-    output = model(example_input)
-    print(f'output = {output}')
+    y = model(x)
+    print(f'y = {y}')
+
+    # Trigger implicit gradient computation
+    y.sum().backward()
+    print(f'gradient dy/dx = {x.grad}')
 
 def get_args():
     parser = argparse.ArgumentParser(description='Args for run script')
