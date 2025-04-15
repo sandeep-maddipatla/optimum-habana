@@ -4,7 +4,6 @@ from optimum.habana.diffusers import (
     GaudiFlowMatchEulerDiscreteScheduler,
     GaudiFluxPipeline,
 )
-import torch._dynamo as dynamo
 
 # load model
 model_name = "black-forest-labs/FLUX.1-schnell"
@@ -22,10 +21,7 @@ pipe = GaudiFluxPipeline.from_pretrained(
     bf16_full_eval=True,
     torch_dtype=torch.bfloat16
 )
+pipe = torch.compile(pipe, backend="hpu_backend")
 
-input_string = "A picture of a dog in a bucket"
-dynamo.explain(pipe)(input_string)
-
-#pipe = torch.compile(pipe, backend="hpu_backend")
-#outputs = pipe(input_string)
-#outputs.images[0].save("out.png")
+outputs = pipe("A picture of a dog in a bucket")
+outputs.images[0].save("out.png")
