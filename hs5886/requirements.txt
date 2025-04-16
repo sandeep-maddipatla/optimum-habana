@@ -1,2 +1,3 @@
 optimum-habana
 sentencepiece
+tlparse
