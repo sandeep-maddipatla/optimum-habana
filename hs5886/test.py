@@ -4,6 +4,7 @@ from optimum.habana.diffusers import (
     GaudiFlowMatchEulerDiscreteScheduler,
     GaudiFluxPipeline,
 )
+from torch._export import capture_pre_autograd_graph
 
 # load model
 model_name = "black-forest-labs/FLUX.1-schnell"
@@ -21,7 +22,9 @@ pipe = GaudiFluxPipeline.from_pretrained(
     bf16_full_eval=True,
     torch_dtype=torch.bfloat16
 )
+input_string = "A picture of a dog in a bucket"
+graph = capture_pre_autograd_graph(pipe, (input_string,))
 pipe = torch.compile(pipe, backend="hpu_backend")
 
-outputs = pipe("A picture of a dog in a bucket")
-outputs.images[0].save("out.png")
+#outputs = pipe(input_string)
+#outputs.images[0].save("out.png")
