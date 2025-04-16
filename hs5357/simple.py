@@ -1,16 +1,18 @@
 import torch
-import habana_frameworks.torch.core as htcore
+import os
+import habana_frameworks.torch
 
-input = torch.zeros(2, 3).to(dtype=torch.float32, device='hpu')
-input[0] = 0
-input[1] = 1
-print(f'input = {input}')
+def test(device):
+    torch.manual_seed(101)
+    in_tensor = torch.randn(1, 2, 9, 9).to(device)
+    out_tensor = torch.conv2d(in_tensor, torch.randn(2, 2, 8, 8).to(device))
+    print(f'out_tensor ({device}): Before Save) - {out_tensor} ')
+    torch.save(out_tensor, f'saved_{device}.pkl')
+    reloaded_tensor = torch.load(f'saved_{device}.pkl')
+    return reloaded_tensor
 
-permuted_input = input.permute(1,0)
-print(f'permuted_input = {permuted_input}')
-
-storage = permuted_input.untyped_storage()
-output = storage.cpu()
-print(f'output = {output}')
-
-
+cpu_out = test('cpu')
+print(f"cpu_out - {cpu_out}")
+hpu_out = test('hpu')
+print(f"hpu_out - {hpu_out.cpu()}")
+assert True == torch.equal(cpu_out, hpu_out.cpu()) 
