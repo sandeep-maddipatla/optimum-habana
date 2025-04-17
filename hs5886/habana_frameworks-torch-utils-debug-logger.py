@@ -41,16 +41,7 @@ def format_args(args):
             return format_string.format(*map(str, format_args))
         elif "%" in format_string:
             # Using % style format
-            retval = None
-            try:
-                retval = format_string % tuple(format_args)
-            except TypeError as e:
-                # Some strings (e.g. IR strings) can have a % literal in them.
-                # This can cause a TypeError exception with above line interpreting them as part of format-specifer
-                # Try to workaround the original error by marking the "%" as a literal
-                format_string_wa = format_string.replace('%', '%%')
-                retval = format_string_wa % tuple(format_args)              
-            return retval
+            return format_string % tuple(format_args)
 
     return ", ".join(map(str, args))
 
