@@ -6,7 +6,7 @@
     "configurations": [
 
         {
-            "name": "hs-5886",
+            "name": "hs-5886-debug",
             "type": "debugpy",
             "request": "launch",
             "program": "test.py",
