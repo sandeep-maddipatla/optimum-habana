@@ -21,7 +21,8 @@
                 "LOG_LEVEL_PT_EAGER": "0",
                 "LOG_LEVEL_PT_ALL": "0",
                 "TORCH_LOGS": "+dynamo,graph_code,aot_graphs,trace_source",
-                "TORCHDYNAMO_VERBOSE": "1", 
+                "TORCHDYNAMO_VERBOSE": "1",
+                "HABANA_LOGS": "/root/optimum-habana/hs5886/logs"
             },
             "justMyCode": false,
             "python": "/usr/bin/python3"
