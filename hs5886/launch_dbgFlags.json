@@ -9,7 +9,7 @@
             "name": "hs-5886-debug",
             "type": "debugpy",
             "request": "launch",
-            "program": "test.py",
+            "program": "simple.py",
             "console": "integratedTerminal",
             "cwd": "/root/optimum-habana/hs5886",
             "args": [

@@ -28,6 +28,6 @@ np.random.seed(seed)
 idx = 4
 st = SimpleTest(idx)
 x = st.step()
+#print(f'x = {x}')
 y = st.step()
-print(x)
-print(y)
+#print(f'y = {y}')
