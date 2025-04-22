@@ -54,5 +54,5 @@ if not is_lazy() and not is_pure_eager():
 image = pipe(
     prompt="A picture of sks dog in a bucket",
 ).images[0]
-prefix = "lazy" if is_lazy() else "eager"
+prefix = "lazy" if is_lazy() else "eager" if is_pure_eager() else "compile"
 image.save(f"{prefix}_dog_quant_lora.png")
