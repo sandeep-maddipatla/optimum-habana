@@ -7,6 +7,11 @@ from optimum.habana.diffusers import (
 )
 from habana_frameworks.torch.utils.internal import is_lazy
 
+def is_pure_eager():
+    mode = os.getenv("MODE", "default")
+    print(f'is_lazy = {is_lazy()} .. mode = {mode}')
+    return True if mode == 'pure-eager' and not is_lazy() else False
+
 # load model
 model_name = "black-forest-labs/FLUX.1-dev"
 scheduler = GaudiFlowMatchEulerDiscreteScheduler.from_pretrained(
@@ -36,7 +41,7 @@ image.save(f"{prefix}_dog_quant.png")
 pipe.load_lora_weights("dsocek/lora-flux-dog", adapter_name="user_lora")
 
 # INC must be done before torch.compile() else it will fail (is this expected behavior?)
-if not is_lazy():
+if not is_lazy() and not is_pure_eager():
     #pipe = torch.compile(pipe, backend="hpu_backend") # <-- whole pipe tc fails for now
     pipe.transformer = torch.compile(pipe.transformer, backend="hpu_backend")
     pipe.vae = torch.compile(pipe.vae, backend="hpu_backend")
