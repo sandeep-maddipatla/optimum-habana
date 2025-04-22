@@ -8,7 +8,9 @@ def get_device():
 
 def get_compile_backend():
     device = get_device()
-    compile_backend = 'hpu_backend' if device=='hpu' else 'inductor'
+    default_compile_backend = 'hpu_backend' if device=='hpu' else 'inductor'
+    backend = os.getenv("BACKEND", "default")
+    compile_backend = default_compile_backend if backend == 'default' else backend
     print(f'torch.compile config: device = {device} .. compile_backend = {compile_backend}')
     return compile_backend
 
