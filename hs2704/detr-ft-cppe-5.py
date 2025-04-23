@@ -22,8 +22,6 @@ if args.device == 'hpu':
     from lightning_habana.pytorch.profiler.profiler import HPUProfiler
     from lightning_habana.pytorch.accelerator       import HPUAccelerator
     from lightning_habana.pytorch.plugins.precision import HPUPrecisionPlugin
-    from optimum.habana.transformers.modeling_utils import adapt_transformers_to_gaudi
-    adapt_transformers_to_gaudi()
  
 train_dl, val_dl = prepare_dataloaders()
 precision = torch.bfloat16 if args.bf16 else torch.float32
