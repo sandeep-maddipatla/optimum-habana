@@ -40,7 +40,6 @@ class Detr(pl.LightningModule):
        labels = [{k: v.to(self.device) for k, v in t.items()} for t in batch["labels"]]
 
        outputs = self.model(pixel_values=pixel_values, pixel_mask=pixel_mask, labels=labels)
-       print(f'outputs = {outputs}')
        torch.hpu.synchronize()
        loss = outputs.loss
        loss_dict = outputs.loss_dict
