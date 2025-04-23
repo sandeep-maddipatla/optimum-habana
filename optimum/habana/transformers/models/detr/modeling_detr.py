@@ -80,7 +80,7 @@ def gaudi_DetrHungarianMatcher_forward(self, outputs, targets):
 
     # Final cost matrix
     cost_matrix = self.bbox_cost * bbox_cost + self.class_cost * class_cost + self.giou_cost * giou_cost
-    cost_matrix = cost_matrix.view(batch_size, num_queries, -1).to(torch.float32)
+    cost_matrix = cost_matrix.view(batch_size, num_queries, -1).to(torch.float32).cpu()
 
     sizes = [len(v["boxes"]) for v in targets]
     indices = [linear_sum_assignment(c[i]) for i, c in enumerate(cost_matrix.split(sizes, -1))]
@@ -98,8 +98,6 @@ def gaudi_DetrLoss_loss_labels(self, outputs, targets, indices, num_boxes):
         raise KeyError("No logits were found in the outputs")
     source_logits = outputs["logits"]
 
-    device = outputs["logits"].device
-    indices = indices.to(device)
     idx = self._get_source_permutation_idx(indices)
     target_classes_o = torch.cat([t["class_labels"][J] for t, (_, J) in zip(targets, indices)])
     target_classes = torch.full(
