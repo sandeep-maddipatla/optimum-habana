@@ -1,6 +1,8 @@
 Repository for DETR ResNet-50 enabling and tuning
 
-Unless otherwise specified, all instructions below assume that the working direcotory is the directory hosting this README.md
+Unless otherwise specified, all instructions below assume that the working directory is the directory hosting this README.md.
+The repository is cloned at $HOME/optimum-habana
+
 ## Dataset checkout
 
 This test uses the [CPPE-5 dataset](https://huggingface.co/datasets/rishitdagli/cppe-5). Download with following steps
@@ -15,11 +17,24 @@ Launch docker:
 
 * 1.21
 
-      docker run -it --rm --name sandeep_1.21 --runtime=habana -e HABANA_VISIBLE_DEVICES=all -e OMPI_MCA_btl_vader_single_copy_mechanism=none -e http_proxy=http://proxy-dmz.intel.com:912 -e https_proxy=http://proxy-dmz.intel.com:912 --cap-add=SYS_NICE --cap-add=SYS_PTRACE --net=host --ipc=host -v $HOME:/root --workdir /root artifactory-kfs.habana-labs.com/docker-local/1.21.0/ubuntu22.04/habanalabs/pytorch-installer-2.6.0:1.21.0-483
+      docker run -it --rm --name test_1.21 --runtime=habana -e HABANA_VISIBLE_DEVICES=all -e OMPI_MCA_btl_vader_single_copy_mechanism=none -e http_proxy=http://proxy-dmz.intel.com:912 -e https_proxy=http://proxy-dmz.intel.com:912 --cap-add=SYS_NICE --cap-add=SYS_PTRACE --net=host --ipc=host -v $HOME:/root --workdir /root artifactory-kfs.habana-labs.com/docker-local/1.21.0/ubuntu22.04/habanalabs/pytorch-installer-2.6.0:1.21.0-483
 
 * In the container, issue following commands to prepare env, if working off a unmerged branch/PR to optimum-habana 
 
       pip install -r requirements.txt
+
+* This model requires some changes in OH scripts to run correctly in baseline lazy and eager modes. So it needs OH installation from source 
+
+      # Switch to root OH directory for installation
+      cd ..
+      
+      # Install OH from this directory
+      pip install -e .
+      
+      # Verify OH installation. Sample output below
+      # optimum-habana           1.18.0.dev0                     /root/optimum-habana
+      pip list | grep optimum
+
 
 ### Recommended Workflow
 
@@ -56,20 +71,20 @@ Simply look for `metrics` in the console log for a summary of the quality metric
 
   * Lazy Mode, Deterministic
     
-        PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.json PT_HPU_METRICS_DUMP_TRIGGERS=process_exit,metric_change  OUTDIR=hpu_training_5epochs_deterministic OPTIONS="--max-epochs 5 --pad --num-buckets 1 --deterministic" ./run.sh
+        PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.json python detr-ft-cppe-5.py --max-epochs 5 --pad --num-buckets 1 --deterministic
 
   * Eager Mode, Non-Deterministic
     In example below, padding and object bucketing are disabled.
 
-        PT_HPU_LAZY_MODE=0 PT_HPU_METRICS_FILE=~/metricslog.json PT_HPU_METRICS_DUMP_TRIGGERS=process_exit,metric_change  OUTDIR=hpu_training_5epochs OPTIONS="--max-epochs 5 --no-pad --num-buckets 0" ./run.sh
+        PT_HPU_LAZY_MODE=0 PT_HPU_METRICS_FILE=~/metricslog.json python detr-ft-cppe-5.py --max-epochs 5 --no-pad --num-buckets 0
 
   * Lazy Mode, with checkpoints dumped at intervals
 
-        PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.json PT_HPU_METRICS_DUMP_TRIGGERS=process_exit,metric_change  OUTDIR=hpu_training_100epochs_ob3 OPTIONS="--max-epochs 100 --pad --num-buckets 3 --ckpt-store-interval-epochs 5" ./run.sh
+        PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.json python detr-ft-cppe-5.py --max-epochs 100 --pad --num-buckets 3 --ckpt-store-interval-epochs 5
 
   * Inference using Checkpoints generated from training.
 
-        PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.json PT_HPU_METRICS_DUMP_TRIGGERS=process_exit,metric_change  OUTDIR=hpu_inf_5epochs_ob2 OPTIONS="--use-ckpt --ckpt-path hpu_training_100epochs_ob3/cppe-5.ckpt" ./run_inference.sh
+        PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.json python detr-inference.py --use-ckpt --ckpt-path /path/to/cppe-5.ckpt ./run_inference.sh
 
     * Dumps metrics on quality, and annotated output images
     * Runs through validation dataset
