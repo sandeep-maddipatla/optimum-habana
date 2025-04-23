@@ -21,7 +21,7 @@ def parse_arguments():
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--device', choices=['hpu', 'cpu', 'cuda'], default='hpu', type=str)
     parser.add_argument('--ckpt-path', default="./cppe-5.ckpt", type=str)
-    parser.add_argument('--ckpt-store-interval-epochs', default=0, type=int)
+    parser.add_argument('--ckpt-store-interval-epochs', default=5, type=int)
     parser.add_argument('--ckpt-store-path', default="./", type=str)
     
     # Arguments specifically for inference
