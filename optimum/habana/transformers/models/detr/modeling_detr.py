@@ -3,7 +3,7 @@ from scipy.optimize import linear_sum_assignment
 from torch import nn
 from transformers.loss.loss_deformable_detr import center_to_corners_format, generalized_box_iou
 from transformers.utils import is_accelerate_available
-
+from habana_frameworks.torch.utils.internal import is_lazy
 
 if is_accelerate_available():
     from accelerate import PartialState
@@ -129,9 +129,10 @@ def gaudi_DetrLoss_loss_boxes(self, outputs, targets, indices, num_boxes):
     if "pred_boxes" not in outputs:
         raise KeyError("No predicted boxes found in outputs")
     
-    #indices is a list of (x,y) tensor tuples. make sure they are all on hpu to avoid lazy mode error
-    device = outputs["logits"].device
-    indices = [ (x.to(device), y.to(device)) for x, y in indices]
+    if is_lazy():
+        #indices is a list of (x,y) tensor tuples. make sure they are all on hpu to avoid lazy mode error
+        device = outputs["logits"].device
+        indices = [ (x.to(device), y.to(device)) for x, y in indices]
 
     idx = self._get_source_permutation_idx(indices)
     source_boxes = outputs["pred_boxes"][idx]
