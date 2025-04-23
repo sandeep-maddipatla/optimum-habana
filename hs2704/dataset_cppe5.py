@@ -12,8 +12,8 @@ buckets = None
 train_dataloader = None
 val_dataloader = None
 
-img_folder = '/root/gs-274/CPPE-Dataset/data/images'
-annotations_folder = '/root/gs-274/CPPE-Dataset/data/annotations'
+img_folder = '/root/CPPE-Dataset/data/images'
+annotations_folder = '/root/CPPE-Dataset/data/annotations'
 train_ann_file = os.path.join(annotations_folder, "train.json")
 val_ann_file = os.path.join(annotations_folder, "test.json")
 

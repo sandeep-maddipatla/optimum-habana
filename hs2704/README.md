@@ -1,53 +1,25 @@
 Repository for DETR ResNet-50 enabling and tuning
 
-## Required Repo Checkouts
-
-- This Repository and branch
-  - Checkout to ~/gs-274/detr-ft
-- Optimum Habana for model patches to workaround problems encountered with this model and to optimize performance.
-  - Currently these changes are in [this fork](https://github.com/sandeep-maddipatla/optimum-habana.git)
-  - Checkout the detr-hpu branch to ~/optimum-habana
-  - When this branch is merged as part of optimum-habana release, these steps related to optimum-habana are unnecessary
-
-        git clone https://github.com/sandeep-maddipatla/optimum-habana.git && cd optimum-habana
-        git checkout detr-hpu && cd ..
-
+Unless otherwise specified, all instructions below assume that the working direcotory is the directory hosting this README.md
 ## Dataset checkout
 
 This test uses the [CPPE-5 dataset](https://huggingface.co/datasets/rishitdagli/cppe-5). Download with following steps
 
-    cd ~/gs-274/detr-ft
     bash prepare_dataset.sh
 
-The dataset should be downloaded to `~/gs-274/CPPE-Dataset`
+The dataset should be downloaded to `${HOME}/CPPE-Dataset`
 
 ## HPU
 
 Launch docker:
 
-* 1.17
+* 1.21
 
-      docker run -it --rm --name sandeep_1.17 --runtime=habana -e HABANA_VISIBLE_DEVICES=all
-                 -e OMPI_MCA_btl_vader_single_copy_mechanism=none -e http_proxy=http://proxy-dmz.intel.com:912
-                 -e https_proxy=http://proxy-dmz.intel.com:912
-                 --cap-add=sys_nice --net=host --ipc=host
-                 -v $HOME:/root --workdir /root
-                  vault.habana.ai/gaudi-docker/1.17.0/ubuntu22.04/habanalabs/pytorch-installer-2.3.1:1.17.0-495
+      docker run -it --rm --name sandeep_1.21 --runtime=habana -e HABANA_VISIBLE_DEVICES=all -e OMPI_MCA_btl_vader_single_copy_mechanism=none -e http_proxy=http://proxy-dmz.intel.com:912 -e https_proxy=http://proxy-dmz.intel.com:912 --cap-add=SYS_NICE --cap-add=SYS_PTRACE --net=host --ipc=host -v $HOME:/root --workdir /root artifactory-kfs.habana-labs.com/docker-local/1.21.0/ubuntu22.04/habanalabs/pytorch-installer-2.6.0:1.21.0-483
 
 * In the container, issue following commands to prepare env, if working off a unmerged branch/PR to optimum-habana 
 
-      cd ~/gs-274/detr-ft
       pip install -r requirements.txt
-
-      # Below required for working off a PR/ unmerged branch of optimum-habana
-      cd ~/optimum-habana
-      pip uninstall -y optimum-habana
-      python setup.py build
-      python setup.py install
-      cd ~/gs-274/detr-ft
-
-  * If working off a stable optimum-habana that contains all required changes, only the first two steps are required
-    * Optimum Habana comes installed with the docker container, and no other changes are needed then.
 
 ### Recommended Workflow
 
@@ -57,16 +29,12 @@ Below to be executed within the docker container launched with above step.
 
 Recommended to use lazy mode with `--pad` and `--num-buckets 1` for performance. Sample commmand line below:
 
-    PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.json PT_HPU_METRICS_DUMP_TRIGGERS=process_exit,metric_change  OUTDIR=hpu_training_100epochs_ob1 OPTIONS="--max-epochs 100 --pad --num-buckets 1 --ckpt-store-interval-epochs 5" ./run.sh
+    PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.jsoclear python detr-ft-cppe-5.py --max-epochs 5 --pad --num-buckets 1
 
 Note:
 - The option `--ckpt-store-interval-epochs 5` dumps the checkpoint for every few epochs that can
   allow assessment of model quality in post. This step can potentially be integrated into the validation
   step of the model, but we have chosen to keep it separate for now.
-  
-- The model patches in optimum-habana are meant to have the model ignore padded objects and
-  generate quality equivalent to `num-buckets 0`. Of course, `--num-buckets 1` is still required for
-  performance to avoid recompilations in lazy mode execution
 
 #### Inference and Quality assessment:
  
