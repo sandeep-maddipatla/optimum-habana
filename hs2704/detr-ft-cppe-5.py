@@ -3,6 +3,7 @@ import torch
 import torchvision
 import numpy as np
 from torch.utils.data import DataLoader
+from habana_frameworks.torch.utils.internal import is_lazy
 
 from arguments import parse_arguments, show_arguments, args
 from dataset_cppe5 import processor, prepare_dataloaders, get_num_labels, img_folder, train_dataset, val_dataset
@@ -49,6 +50,10 @@ else:
 if not args.autocast:
     print(f'Autocast is disabled. Casting model to {precision}')
     model.model = model.model.to(precision)
+
+if args.compile and not is_lazy():
+    print(f'Apply torch.compile with backend={args.backend}')
+    model = torch.compile(model, backend=args.backend)
 
 ## Debug: model op dynamicity study
 ## TODO: Enabling this crashes the app. Fix it.
