@@ -20,6 +20,8 @@ def parse_arguments():
     parser.add_argument('--threshold', default=0.5, type=float)
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--device', choices=['hpu', 'cpu', 'cuda'], default='hpu', type=str)
+    parser.add_argument('--compile', default=False, action=argparse.BooleanOptionalAction)
+    parser.add_argument('--backend', default="hpu_backend", type=str)
     parser.add_argument('--ckpt-path', default="./cppe-5.ckpt", type=str)
     parser.add_argument('--ckpt-store-interval-epochs', default=5, type=int)
     parser.add_argument('--ckpt-store-path', default="./", type=str)
