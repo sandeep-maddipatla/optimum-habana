@@ -1,7 +1,11 @@
 import torch
 import lightning as pl
+import transformers
 from transformers import DetrForObjectDetection
 from dataset_cppe5 import get_num_labels
+import optimum
+
+transformers.loss.loss_for_object_detection.ImageLoss.gaudi_DetrLoss_get_targets_without_no_objects = optimum.habana.transformers.models.gaudi_DetrLoss_get_targets_without_no_objects
 
 class Detr(pl.LightningModule):
      def __init__(self, lr, lr_backbone, weight_decay, train_dl, val_dl):
@@ -35,7 +39,8 @@ class Detr(pl.LightningModule):
        labels = [{k: v.to(self.device) for k, v in t.items()} for t in batch["labels"]]
 
        outputs = self.model(pixel_values=pixel_values, pixel_mask=pixel_mask, labels=labels)
-
+       print(f'outputs = {outputs}')
+       torch.hpu.synchronize()
        loss = outputs.loss
        loss_dict = outputs.loss_dict
        return loss, loss_dict
