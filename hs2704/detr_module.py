@@ -3,9 +3,10 @@ import lightning as pl
 import transformers
 from transformers import DetrForObjectDetection
 from dataset_cppe5 import get_num_labels
-import optimum
+from transformers.loss.loss_for_object_detection import ImageLoss
+from optimum.habana.transformers.models.detr import modeling_detr
 
-transformers.loss.loss_for_object_detection.ImageLoss.gaudi_DetrLoss_get_targets_without_no_objects = optimum.habana.transformers.models.gaudi_DetrLoss_get_targets_without_no_objects
+ImageLoss.gaudi_DetrLoss_get_targets_without_no_objects = modeling_detr.gaudi_DetrLoss_get_targets_without_no_objects
 
 class Detr(pl.LightningModule):
      def __init__(self, lr, lr_backbone, weight_decay, train_dl, val_dl):
