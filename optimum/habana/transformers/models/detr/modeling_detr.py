@@ -128,6 +128,11 @@ def gaudi_DetrLoss_loss_boxes(self, outputs, targets, indices, num_boxes):
     """
     if "pred_boxes" not in outputs:
         raise KeyError("No predicted boxes found in outputs")
+    
+    #indices is a list of (x,y) tensor tuples. make sure they are all on hpu to avoid lazy mode error
+    device = outputs["logits"].device
+    indices = [ (x.to(device), y.to(device)) for x, y in indices]
+
     idx = self._get_source_permutation_idx(indices)
     source_boxes = outputs["pred_boxes"][idx]
     target_boxes = torch.cat([t["boxes"][i] for t, (_, i) in zip(targets, indices)], dim=0)
