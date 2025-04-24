@@ -1,7 +1,7 @@
 Repository for DETR ResNet-50 enabling and tuning
 
 Unless otherwise specified, all instructions below assume that the working directory is the directory hosting this README.md.
-The repository is cloned at $HOME/optimum-habana
+The repository is cloned at `$HOME/optimum-habana`
 
 ## Dataset checkout
 
@@ -42,9 +42,18 @@ Below to be executed within the docker container launched with above step.
 
 #### Running Training:
 
-Recommended to use lazy mode with `--pad` and `--num-buckets 1` for performance. Sample commmand line below:
+With 1.19 - Recommended to use lazy mode with `--pad` and `--num-buckets 1` for performance. With 1.21, certain additional patches were required and preliminary testing shows closer eager vs lazy mode performance.
 
-    PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.jsoclear python detr-ft-cppe-5.py --max-epochs 5 --pad --num-buckets 1
+Sample commmand lines below:
+
+    # Lazy Mode
+    PT_HPU_LAZY_MODE=1 PT_HPU_METRICS_FILE=~/metricslog.json python detr-ft-cppe-5.py --max-epochs 5 --pad --num-buckets 1
+
+    # Eager Mode
+    PT_HPU_LAZY_MODE=0 PT_HPU_METRICS_FILE=~/metricslog.json python detr-ft-cppe-5.py --max-epochs 5 --pad --num-buckets 0
+
+    # Eager Mode with torch.compile
+    PT_HPU_LAZY_MODE=0 PT_HPU_METRICS_FILE=~/metricslog.json python detr-ft-cppe-5.py --max-epochs 5 --pad --num-buckets 0 --compile
 
 Note:
 - The option `--ckpt-store-interval-epochs 5` dumps the checkpoint for every few epochs that can
