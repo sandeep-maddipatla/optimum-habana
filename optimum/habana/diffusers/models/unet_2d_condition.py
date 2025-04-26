@@ -16,7 +16,7 @@ from .attention_processor import (
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
-
+@torch.compiler.disable
 def gaudi_unet_2d_condition_model_forward(
     self,
     sample: torch.FloatTensor,

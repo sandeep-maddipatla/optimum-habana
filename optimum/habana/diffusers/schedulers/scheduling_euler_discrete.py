@@ -152,6 +152,7 @@ class GaudiEulerDiscreteScheduler(EulerDiscreteScheduler):
             raise ValueError("Time-dependent parameters should be set first.")
         return
 
+    @torch.compiler.disable
     def scale_model_input(
         self, sample: torch.FloatTensor, timestep: Union[float, torch.FloatTensor]
     ) -> torch.FloatTensor:
