@@ -1,5 +1,6 @@
 import torch
 import habana_frameworks.torch.hpu as hthpu
+import random
 
 class Model2(torch.nn.Module):
     def __init__(self, inp_size, out_size, inner_size):
