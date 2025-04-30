@@ -14,6 +14,11 @@ class Model2(torch.nn.Module):
         out = self.l2(res)
         return out
 
+torch.set_num_threads(1)
+seed = 42
+random.seed(seed)
+torch.manual_seed(seed)
+
 device = torch.device('hpu')
 BS, inp_size, out_size, inner_size = 1, 50000, 20000, 35000
 
