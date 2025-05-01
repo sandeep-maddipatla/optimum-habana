@@ -18,7 +18,6 @@
 
 import torch
 from habana_frameworks.torch.utils.debug.dynamo_utils import FxGraphAnalyzer
-import sys
 import pytest
 import logging
 
@@ -95,6 +94,7 @@ def test_as_strided_not_possible_to_merge():
     t2 = torch.rand(4, 4, device="hpu")
     _, _ = func(t1, t2)
 
+
 def test_select_with_scalar_symint_index():
     # Test to check if pass_wa_mixed_devices doesn't generate aten::IntImplicit op
     # in the case where we select a tensor element using a scalar marked as a SymInt
@@ -104,7 +104,7 @@ def test_select_with_scalar_symint_index():
         def __init__(self, index):
             self.index = index if (index >= 0 and index < 16) else None
             self.data = torch.rand(16, device="hpu")
- 
+
         @torch.compile(backend="hpu_backend")
         def foo(self):
             data = self.data[self.index]
