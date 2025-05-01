@@ -113,7 +113,6 @@ def test_select_with_scalar_symint_index():
             self.index += 1
             return retval
 
-    result = None
     try:
         st = SimpleTest(3)
         x = st.foo()
