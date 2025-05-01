@@ -18,7 +18,11 @@
 
 import torch
 from habana_frameworks.torch.utils.debug.dynamo_utils import FxGraphAnalyzer
+import sys
+import pytest
+import logging
 
+logger = logging.getLogger(__name__)
 
 def test_pass_fuse_view_chains():
     # It doesn't matter all that much which operations are performed
@@ -91,4 +95,31 @@ def test_as_strided_not_possible_to_merge():
     t2 = torch.rand(4, 4, device="hpu")
     _, _ = func(t1, t2)
 
+def test_select_with_scalar_symint_index():
+    # Test to check if pass_wa_mixed_devices doesn't generate aten::IntImplicit op
+    # in the case where we select a tensor element using a scalar marked as a SymInt
+    # as the index. foo is called twice to force self.index to be marked so and not
+    # just interpreted as a constant.
+    class SimpleTest:
+        def __init__(self, index):
+            self.index = index if (index >= 0 and index < 16) else None
+            self.data = torch.rand(16, device="hpu")
+ 
+        @torch.compile(backend="hpu_backend")
+        def foo(self):
+            data = self.data[self.index]
+            data_next = self.data[self.index + 1]
+            retval = data_next - data
+            self.index += 1
+            return retval
 
+    result = None
+    try:
+        st = SimpleTest(3)
+        x = st.foo()
+        logger.info(f'{x=}')
+        y = st.foo()
+        logger.info(f'{y=}')
+        return True
+    except Exception as e:
+        pytest.fail(f"Hit unexpected error: {e}")
