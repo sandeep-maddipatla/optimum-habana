@@ -5,7 +5,7 @@ from optimum.habana.diffusers import (
     GaudiEulerAncestralDiscreteScheduler,
 )
 #load model
-model_name = "stabilityai/stable-diffusion-xl-base-1.0"
+model_name = "stabilityai/sdxl-turbo"
 scheduler = GaudiEulerAncestralDiscreteScheduler.from_pretrained(
     model_name,
     subfolder="scheduler"
@@ -20,5 +20,5 @@ pipe = GaudiStableDiffusionXLPipeline.from_pretrained(
     torch_dtype=torch.bfloat16
 )
 pipe = torch.compile(pipe, backend="hpu_backend")
-outputs = pipe("A dog chasing a car")
+outputs = pipe("A dog chasing a tiger")
 outputs.images[0].save("out.png")
