@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "hs-6172",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "test.py",
+            "console": "integratedTerminal",
+            "cwd": "/root/optimum-habana/examples/stable-diffusion/training",
+            "args": [
+            ],
+            "env": {
+                "PT_HPU_LAZY_MODE": "0",
+                "PT_HPU_GRAPH_DUMP_MODE": "all",
+                "LOG_LEVEL_PT_PYTHON": "1",
+                "TORCH_LOGS": "+dynamo,graph,graph_code,aot_graphs,trace_source",
+                "HABANA_LOGS": "/root/optimum-habana/examples/stable-diffusion/training/logs",
+                "MODEL_NAME": "stable-diffusion-v1-5/stable-diffusion-v1-5",
+                "INSTANCE_DIR": "dog",
+                "CLASS_DIR": "path-to-class-images",
+                "OUTPUT_DIR": "out"
+            },
+            "justMyCode": false,
+            "python": "/usr/bin/python3"
+        }
+    ]
+}
