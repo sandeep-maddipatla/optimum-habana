@@ -1056,6 +1056,7 @@ def main(args):
         config = create_text_encoder_adapter_config(args)
         text_encoder = get_peft_model(text_encoder, config)
         text_encoder.print_trainable_parameters()
+    unet = torch.compile(unet, backend="hpu_backend")
     text_encoder.to(accelerator.device)
     if args.enable_xformers_memory_efficient_attention:
         if is_xformers_available():
