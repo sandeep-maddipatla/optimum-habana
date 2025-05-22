@@ -66,6 +66,8 @@ from optimum.habana.diffusers import GaudiStableDiffusionPipeline
 from optimum.habana.transformers.trainer import _is_peft_model
 from optimum.habana.utils import set_seed
 
+import warnings
+warnings.filterwarnings("ignore")
 
 logger = get_logger(__name__)
 
@@ -997,6 +999,7 @@ def main(args):
                     image.save(image_filename)
 
             del pipeline
+    logger.info(f'Class image generation is done')
 
     # Handle the repository creation
     if accelerator.is_main_process:
@@ -1029,6 +1032,7 @@ def main(args):
 
     # import correct text encoder class
     text_encoder_cls = import_model_class_from_model_name_or_path(args.pretrained_model_name_or_path, args.revision)
+    logger.info(f'Text encoder class import done')
 
     # Load scheduler and models
     noise_scheduler = DDPMScheduler(
@@ -1057,7 +1061,12 @@ def main(args):
         text_encoder = get_peft_model(text_encoder, config)
         text_encoder.print_trainable_parameters()
     unet = torch.compile(unet, backend="hpu_backend")
+    logger.info(f'torch.compile called on unet')
+
     text_encoder.to(accelerator.device)
+    logger.info(f'Text encoder moved to device')
+
+
     if args.enable_xformers_memory_efficient_attention:
         if is_xformers_available():
             unet.enable_xformers_memory_efficient_attention()
@@ -1111,6 +1120,7 @@ def main(args):
         collate_fn=lambda examples: collate_fn(examples, args.with_prior_preservation),
         num_workers=1,
     )
+    logger.info(f'Train_Dataloader initiated')
 
     # Scheduler and math around the number of training steps.
     overrode_max_train_steps = False
@@ -1170,7 +1180,7 @@ def main(args):
             if accelerator.distributed_type == DistributedType.MULTI_HPU:
                 kwargs = {}
                 kwargs["gradient_as_bucket_view"] = True
-                accelerator.ddp_handler = DistributedDataParallelKwargs(**kwargs)
+                accelerator.ddp_h0andler = DistributedDataParallelKwargs(**kwargs)
             if args.use_hpu_graphs_for_training:
                 if _is_peft_model(model):
                     base_model = model.get_base_model()
@@ -1218,10 +1228,16 @@ def main(args):
     progress_bar = tqdm(range(global_step, args.max_train_steps), disable=not accelerator.is_local_main_process)
     progress_bar.set_description("Steps")
 
+    epoch_count = 0
     for epoch in range(first_epoch, args.num_train_epochs):
+        logger.info(f'==========={epoch_count=}===========')
         unet.train()
+        logger.info(f'Unet.train done')
+
         if args.train_text_encoder:
             text_encoder.train()
+            logger.info(f'text_encoder.train done')
+
         with TorchTracemalloc() as tracemalloc:
             for step, batch in enumerate(train_dataloader):
                 # Skip steps until we reach the resumed step
@@ -1255,6 +1271,8 @@ def main(args):
 
                     # Predict the noise residual
                     model_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
+                    logger.info(f'Unet call with noisy_latents done')
+
 
                     # Get the target for loss depending on the prediction type
                     if noise_scheduler.config.prediction_type == "epsilon":
@@ -1279,8 +1297,11 @@ def main(args):
                         loss = loss + args.prior_loss_weight * prior_loss
                     else:
                         loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                    logger.info(f'Loss compute done')
+
 
                     accelerator.backward(loss)
+                    logger.info(f'accelerator Backward step done')
                     htcore.mark_step()
                     if accelerator.sync_gradients:
                         params_to_clip = (
@@ -1293,6 +1314,8 @@ def main(args):
                     lr_scheduler.step()
                     optimizer.zero_grad(set_to_none=True)
                     htcore.mark_step()
+                    logger.info(f'optimizer step and zero grad done')
+
 
                 # Checks if the accelerator has performed an optimization step behind the scenes
                 if accelerator.sync_gradients:
@@ -1395,7 +1418,11 @@ def main(args):
         )
 
     # Create the pipeline using using the trained modules and save it.
+    logger.info(f'Waiting for everyone')
+
     accelerator.wait_for_everyone()
+    logger.info(f'Done waiting')
+
     if accelerator.is_main_process:
         if args.adapter != "full":
             unwarpped_unet = unwrap_model(unet)
@@ -1428,7 +1455,9 @@ def main(args):
                 run_as_future=True,
             )
 
+    logger.info(f'Before End Training')
     accelerator.end_training()
+    logger.info(f'Ended Training')
 
 
 if __name__ == "__main__":
