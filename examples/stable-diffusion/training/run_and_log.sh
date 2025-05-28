@@ -22,6 +22,11 @@ run() {
     tensorboard --logdir ./profile_logs --bind_all --port=5990 &
     tb_pid=$(echo $!)
     echo Running tensorboard as background process $tb_pid
+
+    pkill hl-smi
+    hl-smi -l 1 -Q "timestamp,name,bus_id,driver_version,temperature.aip,utilization.aip,memory.total,memory.free,memory.used,pcie.link.gen.max,pcie.link.gen.current,pcie.link.width.max" -f csv > hlsmi.csv
+    hlsmi_pid=$(echo $!)
+    echo Running hl-smi as background process $hlsmi_pid
     
     cmd="$*"
     echo ${cmd} | tee ${result_dir}/cmdline.log
@@ -37,8 +42,10 @@ run() {
     cp *.py  ${result_dir}
     cp *.log  ${result_dir} 2>/dev/null
     cp $0 ${result_dir} 2>/dev/null
+    mv hlsmi.csv ${result_dir} 2>/dev/null
     chmod -R 777 ${result_dir}
     pkill tensorboard
+    pkill hl-smi
     echo Results collected in ${result_dir}. Size $(du -sh ${result_dir})
 }
 
