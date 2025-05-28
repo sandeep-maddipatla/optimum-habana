@@ -18,12 +18,18 @@ run() {
     result_dir=$(make_unique_dir ${tag})
     echo Using ${result_dir}
     
+    pkill tensorboard
+    tensorboard --logdir ./profile_logs --bind_all --port=5990 &
+    tb_pid=$(echo $!)
+    echo Running tensorboard as background process $tb_pid
+    
     cmd="$*"
     echo ${cmd} | tee ${result_dir}/cmdline.log
     eval ${cmd} 2>&1 | tee ${result_dir}/result.log
 
     [ -d logs ] && mv logs ${result_dir}
     [ -d .graph_dumps ] && mv .graph_dumps ${result_dir}/graph_dumps || mkdir -p ${result_dir}/graph_dumps
+    [ -d profile_logs ] && mv profile_logs ${result_dir}
     echo $(find ${result_dir}/graph_dumps/ -maxdepth 1 -type f -name '*.pbtxt' | wc -l) graphs collected in ${result_dir}/graph_dumps
     mkdir -p ${result_dir}/graph_dumps/eager_graphs
     for x in $(seq 0 9); do mv ${x}*.pbtxt ${result_dir}/graph_dumps/eager_graphs 2>/dev/null; done
@@ -32,6 +38,7 @@ run() {
     cp *.log  ${result_dir} 2>/dev/null
     cp $0 ${result_dir} 2>/dev/null
     chmod -R 777 ${result_dir}
+    pkill tensorboard
     echo Results collected in ${result_dir}. Size $(du -sh ${result_dir})
 }
 

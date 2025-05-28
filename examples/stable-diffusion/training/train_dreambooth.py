@@ -1300,8 +1300,15 @@ def main(args):
                         loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
                     logger.info(f'Loss compute done')
 
+                    with torch.profiler.profile(
+                        schedule=torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1),
+                        activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU],
+                        on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
+                        profile_memory=True
+                        ) as profiler:
+                        accelerator.backward(loss)
+                        profiler.step()
 
-                    accelerator.backward(loss)
                     logger.info(f'accelerator Backward step done')
                     htcore.mark_step()
                     if accelerator.sync_gradients:
