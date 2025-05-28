@@ -4,6 +4,7 @@ export INSTANCE_DIR="dog"
 export CLASS_DIR="path-to-class-images"
 export OUTPUT_DIR="out"
 export PT_HPU_LAZY_MODE=${PT_HPU_LAZY_MODE:-0}
+export TRAIN_STEPS=${TRAIN_STEPS:-100}
 
 python train_dreambooth.py \
   --pretrained_model_name_or_path=$MODEL_NAME  \
@@ -21,7 +22,7 @@ python train_dreambooth.py \
   --learning_rate=5e-6 \
   --lr_scheduler="constant" \
   --lr_warmup_steps=0 \
-  --max_train_steps=100 \
+  --max_train_steps=$TRAIN_STEPS \
   --gaudi_config_name Habana/stable-diffusion \
  boft
 
