@@ -3280,21 +3280,15 @@ class AttnProcessor2_0:
             query = attn.norm_q(query)
         if attn.norm_k is not None:
             key = attn.norm_k(key)
-        '''
-        print(f'========= {batch_size=} .. {attn.heads=} .. {head_dim=} =======')
-        print(f'{query.shape=} .. {query.stride()=} .. {query.is_contiguous()=}')
-        print(f'{key.shape=} .. {key.stride()=} .. {key.is_contiguous()=}')
-        print(f'{value.shape=} .. {value.stride()=} .. {value.is_contiguous()=}')
-        if attention_mask is not None:
-            print(f'{attention_mask.shape=} .. {attention_mask.stride()=} .. {attention_mask.is_contiguous()=}')
-        '''
+
+        if torch.compiler.is_dynamo_compiling():
+            torch._dynamo.graph_break()
+
         # the output of sdp = (batch, num_heads, seq_len, head_dim)
         # TODO: add support for attn.scale when we move to Torch 2.1
         hidden_states = F.scaled_dot_product_attention(
             query, key, value, attn_mask=attention_mask, dropout_p=0.0, is_causal=False
         )
-
-        #print(f'{hidden_states.shape=} .. {hidden_states.stride()=} .. {hidden_states.is_contiguous()=}')
 
         hidden_states = hidden_states.transpose(1, 2).reshape(batch_size, -1, attn.heads * head_dim)
         hidden_states = hidden_states.to(query.dtype)
