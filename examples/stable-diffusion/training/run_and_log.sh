@@ -43,6 +43,7 @@ run() {
     cp $0 ${result_dir} 2>/dev/null
     mv hlsmi.csv ${result_dir} 2>/dev/null
     mv metricslog.json ${result_dir} 2>/dev/null
+    mv *.hltv ${result_dir}
     chmod -R 777 ${result_dir}
     pkill tensorboard
     pkill hl-smi
