@@ -34,7 +34,6 @@ run() {
 
     [ -d logs ] && mv logs ${result_dir}
     [ -d .graph_dumps ] && mv .graph_dumps ${result_dir}/graph_dumps || mkdir -p ${result_dir}/graph_dumps
-    [ -d profile_logs ] && mv profile_logs ${result_dir}
     echo $(find ${result_dir}/graph_dumps/ -maxdepth 1 -type f -name '*.pbtxt' | wc -l) graphs collected in ${result_dir}/graph_dumps
     mkdir -p ${result_dir}/graph_dumps/eager_graphs
     for x in $(seq 0 9); do mv ${x}*.pbtxt ${result_dir}/graph_dumps/eager_graphs 2>/dev/null; done
@@ -47,6 +46,9 @@ run() {
     chmod -R 777 ${result_dir}
     pkill tensorboard
     pkill hl-smi
+
+    [ -d profile_logs ] && echo "Sleep 5s to ensure profiles are collected" && sleep 5
+    [ -d profile_logs ] && mv profile_logs ${result_dir}
     echo Results collected in ${result_dir}. Size $(du -sh ${result_dir})
 }
 
