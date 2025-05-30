@@ -1239,7 +1239,12 @@ def main(args):
             text_encoder.train()
             logger.info(f'text_encoder.train done')
 
-        with TorchTracemalloc() as tracemalloc:
+        with torch.profiler.profile(
+            schedule=torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1),
+            activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU],
+            on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
+            profile_memory=True
+            ) as profiler:
             for step, batch in enumerate(train_dataloader):
                 # Skip steps until we reach the resumed step
                 if args.resume_from_checkpoint and epoch == first_epoch and step < resume_step:
@@ -1300,14 +1305,8 @@ def main(args):
                         loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
                     logger.info(f'Loss compute done')
 
-                    with torch.profiler.profile(
-                        schedule=torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1),
-                        activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU],
-                        on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
-                        profile_memory=True
-                        ) as profiler:
-                        accelerator.backward(loss)
-                        profiler.step()
+  
+                    accelerator.backward(loss)
 
                     logger.info(f'accelerator Backward step done')
                     htcore.mark_step()
@@ -1408,22 +1407,10 @@ def main(args):
 
                     del pipeline
 
+                profiler.step()
+
                 if global_step >= args.max_train_steps:
                     break
-        # Printing the HPU memory usage details such as allocated memory, peak memory, and total memory usage
-        accelerator.print(f"HPU Memory before entering the train : {b2mb(tracemalloc.begin)}")
-        accelerator.print(f"HPU Memory consumed at the end of the train (end-begin): {tracemalloc.used}")
-        accelerator.print(f"HPU Peak Memory consumed during the train (max-begin): {tracemalloc.peaked}")
-        accelerator.print(
-            f"HPU Total Peak Memory consumed during the train (max): {tracemalloc.peaked + b2mb(tracemalloc.begin)}"
-        )
-
-        accelerator.print(f"CPU Memory before entering the train : {b2mb(tracemalloc.cpu_begin)}")
-        accelerator.print(f"CPU Memory consumed at the end of the train (end-begin): {tracemalloc.cpu_used}")
-        accelerator.print(f"CPU Peak Memory consumed during the train (max-begin): {tracemalloc.cpu_peaked}")
-        accelerator.print(
-            f"CPU Total Peak Memory consumed during the train (max): {tracemalloc.cpu_peaked + b2mb(tracemalloc.cpu_begin)}"
-        )
 
     # Create the pipeline using using the trained modules and save it.
     logger.info(f'Waiting for everyone')
