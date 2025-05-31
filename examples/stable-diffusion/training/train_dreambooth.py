@@ -1061,8 +1061,8 @@ def main(args):
         config = create_text_encoder_adapter_config(args)
         text_encoder = get_peft_model(text_encoder, config)
         text_encoder.print_trainable_parameters()
-    #unet = torch.compile(unet, backend="hpu_backend")
-    #logger.info(f'torch.compile called on unet')
+    unet = torch.compile(unet, backend="hpu_backend")
+    logger.info(f'torch.compile called on unet')
 
     text_encoder.to(accelerator.device)
     logger.info(f'Text encoder moved to device')
@@ -1306,7 +1306,7 @@ def main(args):
                         loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
                     logger.info(f'Loss compute done')
 
-  
+                    torch.hpu.synchronize()
                     accelerator.backward(loss)
 
                     logger.info(f'accelerator Backward step done')
