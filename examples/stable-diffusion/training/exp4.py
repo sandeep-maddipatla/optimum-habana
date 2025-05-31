@@ -40,7 +40,8 @@ with torch.profiler.profile(
     schedule=torch.profiler.schedule(wait=0, warmup=0, active=20, repeat=1),
     activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU],
     on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
-    profile_memory=True
+    profile_memory=True,
+    record_shapes=True
     ) as profiler:
     for s1 in s1_list:
         in_shape2 = [s1, 8, 8]
@@ -50,3 +51,5 @@ with torch.profiler.profile(
         z = y.sum()
         z.backward()
         profiler.step()
+print(profiler.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=10))
+print(profiler.key_averages(group_by_input_shape=True).table(sort_by="self_cpu_memory_usage", row_limit=10))

@@ -27,7 +27,8 @@ run() {
     hl-smi -l 1 -Q "timestamp,name,bus_id,driver_version,temperature.aip,utilization.aip,memory.total,memory.free,memory.used,pcie.link.gen.max,pcie.link.gen.current,pcie.link.width.max" -f csv > hlsmi.csv 2>&1 &
     hlsmi_pid=$(echo $!)
     echo Running hl-smi as background process $hlsmi_pid
-    
+
+    # Actual run
     cmd="$*"
     echo ${cmd} | tee ${result_dir}/cmdline.log
     eval ${cmd} 2>&1 | tee ${result_dir}/result.log

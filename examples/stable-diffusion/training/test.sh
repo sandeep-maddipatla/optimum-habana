@@ -6,9 +6,6 @@ export OUTPUT_DIR="out"
 export PT_HPU_LAZY_MODE=${PT_HPU_LAZY_MODE:-0}
 export TRAIN_STEPS=${TRAIN_STEPS:-100}
 
-export HABANA_PROFILE=1
-hl-prof-config -e off -skipParse
-
 python train_dreambooth.py \
   --pretrained_model_name_or_path=$MODEL_NAME  \
   --instance_data_dir=$INSTANCE_DIR \

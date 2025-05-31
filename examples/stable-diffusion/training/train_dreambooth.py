@@ -1061,8 +1061,8 @@ def main(args):
         config = create_text_encoder_adapter_config(args)
         text_encoder = get_peft_model(text_encoder, config)
         text_encoder.print_trainable_parameters()
-    unet = torch.compile(unet, backend="hpu_backend")
-    logger.info(f'torch.compile called on unet')
+    #unet = torch.compile(unet, backend="hpu_backend")
+    #logger.info(f'torch.compile called on unet')
 
     text_encoder.to(accelerator.device)
     logger.info(f'Text encoder moved to device')
@@ -1243,7 +1243,8 @@ def main(args):
             schedule=torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1),
             activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU],
             on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
-            profile_memory=True
+            profile_memory=True,
+            record_shapes=True
             ) as profiler:
             for step, batch in enumerate(train_dataloader):
                 # Skip steps until we reach the resumed step
@@ -1412,6 +1413,9 @@ def main(args):
                 if global_step >= args.max_train_steps:
                     break
 
+        print(profiler.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=10))
+        print(profiler.key_averages(group_by_input_shape=True).table(sort_by="self_cpu_memory_usage", row_limit=10))
+    
     # Create the pipeline using using the trained modules and save it.
     logger.info(f'Waiting for everyone')
 
