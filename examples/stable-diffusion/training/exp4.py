@@ -1,5 +1,6 @@
 import torch
 import sys
+from contextlib import nullcontext
 
 def cayley_batch(data):
     """
@@ -36,20 +37,14 @@ s1_list = [160, 160, 360, 40, 96,
            1440, 2880, 2160, 1080,  1440, 
            2880, 2160, 1080, 80, 96]
 
-with torch.profiler.profile(
-    schedule=torch.profiler.schedule(wait=0, warmup=0, active=20, repeat=1),
-    activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU],
-    on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
-    profile_memory=True,
-    record_shapes=True
-    ) as profiler:
-    for s1 in s1_list:
-        in_shape2 = [s1, 8, 8]
-        print(f'{in_shape2=}')
-        in_tensor2 = torch.randn(in_shape2, requires_grad=True, device=device)
-        y = fn(in_tensor2)
-        z = y.sum()
-        z.backward()
-        profiler.step()
-print(profiler.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=10))
-print(profiler.key_averages(group_by_input_shape=True).table(sort_by="self_cpu_memory_usage", row_limit=10))
+enable_profile = False
+with nullcontext():
+    for i in range(1):
+        for s1 in s1_list:
+            in_shape2 = [s1, 8, 8]
+            print(f'{in_shape2=}')
+            in_tensor2 = torch.randn(in_shape2, requires_grad=True, device=device)
+            y = fn(in_tensor2)
+            z = y.sum()
+            z.backward()
+            print(f'{in_tensor2.grad.shape=}')
