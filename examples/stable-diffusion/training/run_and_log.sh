@@ -28,6 +28,10 @@ run() {
     hlsmi_pid=$(echo $!)
     echo Running hl-smi as background process $hlsmi_pid
 
+    export HABANA_PROFILE=1
+    hl-prof-config -e off --hw-trace off
+    hl-prof-config -e off --phase=device-acq -b 256 --skipParse On
+
     # Actual run
     cmd="$*"
     echo ${cmd} | tee ${result_dir}/cmdline.log

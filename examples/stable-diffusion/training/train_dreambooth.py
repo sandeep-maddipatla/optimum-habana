@@ -65,6 +65,7 @@ from optimum.habana.accelerate import GaudiAccelerator
 from optimum.habana.diffusers import GaudiStableDiffusionPipeline
 from optimum.habana.transformers.trainer import _is_peft_model
 from optimum.habana.utils import set_seed
+from contextlib import nullcontext
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -1239,13 +1240,17 @@ def main(args):
             text_encoder.train()
             logger.info(f'text_encoder.train done')
 
+        enable_profile = False
+        '''
         with torch.profiler.profile(
             schedule=torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1),
-            activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU],
+            activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU] if enable_profile else [torch.profiler.ProfilerActivity.CPU],
             on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
-            profile_memory=True,
-            record_shapes=True
+            profile_memory=enable_profile,
+            record_shapes=enable_profile
             ) as profiler:
+        '''
+        with nullcontext():
             for step, batch in enumerate(train_dataloader):
                 # Skip steps until we reach the resumed step
                 if args.resume_from_checkpoint and epoch == first_epoch and step < resume_step:
