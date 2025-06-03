@@ -41,6 +41,7 @@ run() {
     echo Running hl-smi as background process $hlsmi_pid
 
     if [ "${HABANA_PROFILE}" == "1" ]; then
+      echo HABANA_PROFILE=${HABANA_PROFILE}
       hl-prof-config -e off --hw-trace off
       hl-prof-config -e off --phase=device-acq -b 256 --skipParse On
     fi
