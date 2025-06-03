@@ -441,15 +441,14 @@ class BOFTLayer(BaseTunerLayer):
         skew_mat = 0.5 * (data - data.transpose(1, 2))
         id_mat = torch.eye(r, device=data.device).unsqueeze(0).expand(b, r, c)
 
+        param_1 = id_mat + skew_mat
+        param_2 = id_mat - skew_mat
         # Perform the Cayley parametrization
         
-        if torch.compiler.is_dynamo_compiling():
-            torch._dynamo.graph_break()
-
-        Q = torch.linalg.solve(id_mat + skew_mat, id_mat - skew_mat, left=False)
-
-        if torch.compiler.is_dynamo_compiling():
-            torch._dynamo.graph_break()
+        param_1 = param_1.to('cpu')
+        param_2 = param_2.to('cpu')
+        Q = torch.linalg.solve(param_1, param_2, left=False)
+        Q = Q.to(device=data.device)
 
         return Q
 
