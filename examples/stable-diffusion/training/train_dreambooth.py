@@ -1062,6 +1062,8 @@ def main(args):
         config = create_text_encoder_adapter_config(args)
         text_encoder = get_peft_model(text_encoder, config)
         text_encoder.print_trainable_parameters()
+
+    torch._dynamo.allow_in_graph(torch.hpu.synchronize)
     unet = torch.compile(unet, backend="hpu_backend")
     logger.info(f'torch.compile called on unet')
 
@@ -1240,17 +1242,16 @@ def main(args):
             text_encoder.train()
             logger.info(f'text_encoder.train done')
 
-        enable_profile = False
-        '''
-        with torch.profiler.profile(
+        enable_profile = True
+        profiler_ctx =  torch.profiler.profile(
             schedule=torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1),
             activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU] if enable_profile else [torch.profiler.ProfilerActivity.CPU],
             on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
             profile_memory=enable_profile,
-            record_shapes=enable_profile
-            ) as profiler:
-        '''
-        with nullcontext():
+            record_shapes=False
+            )
+        ctx = profiler_ctx if enable_profile else nullcontext()
+        with ctx as profiler:
             for step, batch in enumerate(train_dataloader):
                 # Skip steps until we reach the resumed step
                 if args.resume_from_checkpoint and epoch == first_epoch and step < resume_step:
