@@ -1260,7 +1260,7 @@ def main(args):
             record_shapes=False
             )
         ctx = profiler_ctx if enable_profile else nullcontext()
-        with ctx as profiler:
+        with nullcontext():
             for step, batch in enumerate(train_dataloader):
                 # Skip steps until we reach the resumed step
                 if args.resume_from_checkpoint and epoch == first_epoch and step < resume_step:
@@ -1321,8 +1321,11 @@ def main(args):
                         loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
                     logger.info(f'Loss compute done')
 
-                    torch.hpu.synchronize()
-                    accelerator.backward(loss)
+                    with profiler_ctx as profiler:
+                        torch.hpu.synchronize()
+                        accelerator.backward(loss)
+                        profiler.step()
+                    print(profiler.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=20))
 
                     logger.info(f'accelerator Backward step done')
                     htcore.mark_step()
@@ -1423,13 +1426,9 @@ def main(args):
 
                     del pipeline
 
-                profiler.step()
-
                 if global_step >= args.max_train_steps:
                     break
 
-        print(profiler.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=10))
-        print(profiler.key_averages(group_by_input_shape=True).table(sort_by="self_cpu_memory_usage", row_limit=10))
     
     # Create the pipeline using using the trained modules and save it.
     logger.info(f'Waiting for everyone')
