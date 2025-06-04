@@ -1064,8 +1064,15 @@ def main(args):
         text_encoder.print_trainable_parameters()
 
     torch._dynamo.allow_in_graph(torch.hpu.synchronize)
-    unet = torch.compile(unet, backend="hpu_backend")
-    logger.info(f'torch.compile called on unet')
+    
+    is_lazy = int(os.environ.get("PT_HPU_LAZY_MODE", 0))
+    pure_eager = int(os.environ.get("USE_PURE_EAGER", 0))
+
+    print(f'{pure_eager=} .. {is_lazy=}')
+    if not pure_eager and not is_lazy:
+        print(f'Invoking torch.compile')
+        unet = torch.compile(unet, backend="hpu_backend")
+        logger.info(f'torch.compile called on unet')
 
     text_encoder.to(accelerator.device)
     logger.info(f'Text encoder moved to device')
