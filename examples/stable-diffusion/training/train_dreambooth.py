@@ -66,6 +66,7 @@ from optimum.habana.diffusers import GaudiStableDiffusionPipeline
 from optimum.habana.transformers.trainer import _is_peft_model
 from optimum.habana.utils import set_seed
 from contextlib import nullcontext
+from habana_frameworks.torch.activity_profiler import DebugActivity
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -1253,6 +1254,7 @@ def main(args):
         profiler_ctx =  torch.profiler.profile(
             schedule=torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1),
             activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU] if enable_profile else [torch.profiler.ProfilerActivity.CPU],
+            debug_activities=[DebugActivity.SYNAPSE_FUNCTION_CALLS, DebugActivity.BRIDGE_FUNCTION_CALLS],
             on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
             profile_memory=enable_profile,
             record_shapes=False

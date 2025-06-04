@@ -29,11 +29,6 @@ run() {
     tag=result
     result_dir=$(make_unique_dir ${tag})
     echo Using ${result_dir}
-    
-    pkill tensorboard
-    tensorboard --logdir ./profile_logs --bind_all --port=5990 &
-    tb_pid=$(echo $!)
-    echo Running tensorboard as background process $tb_pid
 
     pkill hl-smi
     hl-smi -l 1 -Q "timestamp,name,bus_id,driver_version,temperature.aip,utilization.aip,memory.total,memory.free,memory.used,pcie.link.gen.max,pcie.link.gen.current,pcie.link.width.max" -f csv > ${result_dir}/hlsmi.csv 2>&1 &
@@ -76,7 +71,7 @@ run() {
     mv metricslog.json ${result_dir} 2>/dev/null
     mv *.hltv ${result_dir}
     chmod -R 777 ${result_dir}
-    pkill tensorboard
+
     pkill hl-smi
     pkill mpstat
     pkill vmstat
