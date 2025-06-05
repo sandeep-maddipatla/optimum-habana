@@ -1252,7 +1252,7 @@ def main(args):
 
         enable_profile = True
         profiler_ctx =  torch.profiler.profile(
-            schedule=torch.profiler.schedule(wait=0, warmup=0, active=1, repeat=1),
+            schedule=torch.profiler.schedule(wait=0, warmup=0, active=args.max_train_steps, repeat=1),
             activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU] if enable_profile else [torch.profiler.ProfilerActivity.CPU],
             debug_activities=[DebugActivity.SYNAPSE_FUNCTION_CALLS, DebugActivity.BRIDGE_FUNCTION_CALLS],
             on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
