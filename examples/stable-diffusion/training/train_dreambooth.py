@@ -1250,16 +1250,18 @@ def main(args):
             text_encoder.train()
             logger.info(f'text_encoder.train done')
 
-        enable_profile = True
-        profiler_ctx =  torch.profiler.profile(
+        enable_profile = False
+        profiler =  torch.profiler.profile(
             schedule=torch.profiler.schedule(wait=0, warmup=0, active=args.max_train_steps, repeat=1),
             activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.HPU] if enable_profile else [torch.profiler.ProfilerActivity.CPU],
             debug_activities=[DebugActivity.SYNAPSE_FUNCTION_CALLS, DebugActivity.BRIDGE_FUNCTION_CALLS],
             on_trace_ready=torch.profiler.tensorboard_trace_handler('./profile_logs'),
             profile_memory=enable_profile,
             record_shapes=False
-            )
-        ctx = profiler_ctx if enable_profile else nullcontext()
+            ) if enable_profile else None
+        if enable_profile:
+            profiler.start()
+
         with nullcontext():
             for step, batch in enumerate(train_dataloader):
                 # Skip steps until we reach the resumed step
@@ -1321,11 +1323,14 @@ def main(args):
                         loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
                     logger.info(f'Loss compute done')
 
-                    with profiler_ctx as profiler:
-                        torch.hpu.synchronize()
+                    if enable_profile:
+                        with torch.profiler.record_function('backward'):
+                            torch.hpu.synchronize()
+                            accelerator.backward(loss)
+                            profiler.step()
+                            print(profiler.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=20))
+                    else:
                         accelerator.backward(loss)
-                        profiler.step()
-                    print(profiler.key_averages(group_by_input_shape=True).table(sort_by="cpu_time_total", row_limit=20))
 
                     logger.info(f'accelerator Backward step done')
                     htcore.mark_step()
@@ -1428,7 +1433,9 @@ def main(args):
 
                 if global_step >= args.max_train_steps:
                     break
-
+        
+        if enable_profile:
+            profiler.stop()
     
     # Create the pipeline using using the trained modules and save it.
     logger.info(f'Waiting for everyone')
