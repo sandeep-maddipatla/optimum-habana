@@ -30,6 +30,7 @@ pipe = GaudiFluxPipeline.from_pretrained(
 
 # quantize with INC (from measured stats)
 os.environ["QUANT_CONFIG"] = "quantization/flux/quantize_config.json"
+'''
 image = pipe(
     prompt="A picture of sks dog in a bucket",
     quant_mode="quantize",
@@ -39,7 +40,7 @@ image.save(f"{prefix}_dog_quant.png")
 
 # load lora
 pipe.load_lora_weights("dsocek/lora-flux-dog", adapter_name="user_lora")
-
+'''
 # INC must be done before torch.compile() else it will fail (is this expected behavior?)
 if not is_lazy() and not is_pure_eager():
     #pipe = torch.compile(pipe, backend="hpu_backend") # <-- whole pipe tc fails for now
@@ -53,6 +54,7 @@ if not is_lazy() and not is_pure_eager():
 
 image = pipe(
     prompt="A picture of sks dog in a bucket",
+    quant_mode="quantize"
 ).images[0]
 prefix = "lazy" if is_lazy() else "eager" if is_pure_eager() else "compile"
 image.save(f"{prefix}_dog_quant_lora.png")
