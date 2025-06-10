@@ -43,11 +43,13 @@ pipe.load_lora_weights("dsocek/lora-flux-dog", adapter_name="user_lora")
 '''
 # INC must be done before torch.compile() else it will fail (is this expected behavior?)
 if not is_lazy() and not is_pure_eager():
-    #pipe = torch.compile(pipe, backend="hpu_backend") # <-- whole pipe tc fails for now
+    pipe = torch.compile(pipe, backend="hpu_backend") # <-- whole pipe tc fails for now
+    '''
     pipe.transformer = torch.compile(pipe.transformer, backend="hpu_backend")
     pipe.vae = torch.compile(pipe.vae, backend="hpu_backend")
     pipe.text_encoder = torch.compile(pipe.text_encoder, backend="hpu_backend")
     pipe.text_encoder_2 = torch.compile(pipe.text_encoder_2, backend="hpu_backend")
+    '''
 
 # load lora (loading after torch.compile also fails but with different error..)
 #pipe.load_lora_weights("dsocek/lora-flux-dog", adapter_name="user_lora")
